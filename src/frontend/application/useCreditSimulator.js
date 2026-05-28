@@ -8,7 +8,11 @@ import {
     calculateTCEA 
 } from '../domain/financialCalculations.js';
 import { financialEntities } from '../infrastructure/mocks/entities.js';
+const API_URL = import.meta.env.VITE_API_URL;
 
+const backendSimulation = ref(null);
+const backendLoading = ref(false);
+const backendError = ref(null);
 // ---- GLOBAL STATE (Shared across all components) ----
 // Intentamos cargar desde localStorage al inicio
 const STORAGE_KEY = 'altoque_simulation_state';
@@ -235,6 +239,46 @@ export function useCreditSimulator() {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(savedSimulationsList.value));
     };
 
+    
+    const simulateWithBackend = async () => {
+        backendLoading.value = true;
+        backendError.value = null;
+
+        try {
+            const payload = {
+                precioVehiculo: Number(vehiclePrice.value),
+                cuotaInicial: Number((vehiclePrice.value * downPaymentPercentage.value) / 100),
+                tasaInteres: Number(rateValue.value),
+                plazoMeses: Number(periods.value),
+                valorResidual: Number(residualValue.value),
+                tipoTasa: rateType.value === 'TEA' ? 'EFECTIVA' : 'NOMINAL'
+            };
+
+            const response = await fetch(`${API_URL}/creditos/simular`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al simular crédito en backend');
+            }
+
+            backendSimulation.value = data;
+            return data;
+        } catch (error) {
+            backendError.value = error.message;
+            console.error('Error conectando con backend:', error);
+            return null;
+        } finally {
+            backendLoading.value = false;
+        }
+    };
+
     return {
         financialEntities,
         selectedEntityId,
@@ -269,6 +313,11 @@ export function useCreditSimulator() {
 
         savedSimulationsList,
         saveCurrentSimulation,
-        deleteSimulation
+        deleteSimulation,
+
+        backendSimulation,
+        backendLoading,
+        backendError,
+        simulateWithBackend
     };
 }

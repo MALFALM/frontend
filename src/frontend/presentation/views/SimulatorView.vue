@@ -198,14 +198,12 @@
     </div> <!-- Cierra config-panel -->
 
     <!-- Recuadro Guardar -->
-    <div class="save-panel mt-4">
-      <button class="btn btn-primary btn-block" @click="handleSave">
-        Guardar Escenario
-      </button>
-      <div v-if="saveMessage" class="save-toast">
-        {{ saveMessage }}
-      </div>
-    </div> <!-- Cierra save-panel -->
+<div class="save-panel mt-4">
+
+  <div v-if="saveMessage" class="save-toast">
+    {{ saveMessage }}
+  </div>
+</div>
 
   </div> <!-- Cierra left-column -->
 
@@ -342,15 +340,29 @@ const {
   monthlyInsuranceFixed,
   schedule,
   metrics,
-  saveCurrentSimulation
+  saveCurrentSimulation,
+
+  backendSimulation,
+  backendLoading,
+  backendError,
+  simulateWithBackend
 } = useCreditSimulator();
 
 const saveMessage = ref('');
 
-const handleSave = () => {
+const handleSave = async () => {
+  const result = await simulateWithBackend();
+
+  if (!result) {
+    saveMessage.value = backendError.value || 'No se pudo conectar con el backend.';
+    setTimeout(() => { saveMessage.value = ''; }, 3000);
+    return;
+  }
+
   saveCurrentSimulation();
-  saveMessage.value = '¡Simulación guardada en tu historial!';
-  setTimeout(() => { saveMessage.value = ''; }, 3000);
+  saveMessage.value = `Escenario guardado. Backend calculó: monto financiado S/ ${formatMoney(result.resultados.montoFinanciado)}, TEM ${result.resultados.tem}% y cuota base S/ ${formatMoney(result.resultados.cuotaBase)}.`;
+
+  setTimeout(() => { saveMessage.value = ''; }, 5000);
 };
 
 const formatMoney = (val) => {

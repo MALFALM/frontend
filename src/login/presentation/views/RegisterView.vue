@@ -20,26 +20,50 @@
       <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
           <label>Nombre completo</label>
-          <input type="text" placeholder="Ej: Juan Pérez" required class="input-field" />
+          <input 
+          type="text" 
+          v-model="fullName"
+          placeholder="Ej: Juan Pérez" 
+          required 
+          class="input-field" 
+          />
         </div>
         
         <div class="form-group">
           <label>Correo electrónico</label>
-          <input type="email" placeholder="correo@ejemplo.com" required class="input-field" />
+          <input
+          type="email" 
+          v-model="email"
+          placeholder="correo@ejemplo.com" 
+          required 
+          class="input-field" 
+          />
           <span v-if="role === 'entidad'" class="field-hint">Usa el correo corporativo proporcionado por el banco.</span>
         </div>
         
         <div class="form-group">
           <label>Contraseña</label>
-          <input type="password" placeholder="••••••••" required class="input-field" />
+          <input 
+          type="password" 
+          v-model="password"
+          placeholder="••••••••" 
+          required 
+          class="input-field" 
+          />
         </div>
         
         <div class="form-group">
           <label>Confirmar contraseña</label>
-          <input type="password" placeholder="••••••••" required class="input-field" />
+          <input 
+          type="password" 
+          v-model="confirmPassword"
+          placeholder="••••••••" 
+          required 
+          class="input-field" 
+          />
         </div>
         
-        <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
+        <button type="submit" class="btn btn-primary btn-block" :disabled="loading">Crear cuenta</button>
       </form>
       
       <div class="divider">
@@ -55,6 +79,14 @@
         ¿Ya tienes cuenta? <router-link to="/login" class="link-primary font-bold">Inicia sesión</router-link>
       </p>
     </div>
+
+    <div 
+    v-if="toast.show" 
+    class="toast-message"
+    :class="toast.type">
+    {{ toast.message }}
+    </div>
+
   </AuthLayout>
 </template>
 
@@ -63,16 +95,80 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthLayout from '../layouts/AuthLayout.vue';
 
+const fullName = ref('');
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const loading = ref(false);
+
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'success'
+});
+
 const router = useRouter();
 const role = ref('cliente');
 
-const handleRegister = () => {
-  router.push('/inicio');
+const API_URL = import.meta.env.VITE_API_URL;
+
+const showToast = (message, type = 'success') => {
+  toast.value = {
+    show: true,
+    message,
+    type
+  };
+
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 2500);
+};
+
+const handleRegister = async () => {
+
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = 'Las contraseñas no coinciden.';
+    return;
+  }
+
+  if (password.value.length < 8) {
+    errorMessage.value = 'La contraseña debe tener mínimo 8 caracteres.';
+    return;
+  }
+
+  loading.value = true;
+
+  try {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: email.value,
+        password: password.value
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'No se pudo crear la cuenta.');
+    }
+    setTimeout(() => {
+      router.push('/login');
+    }, 1500);
+  } catch (error) {
+    showToast(error.message, 'error');
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleGoogleRegister = () => {
   router.push('/inicio');
 };
+
 </script>
 
 <style scoped>
