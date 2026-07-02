@@ -14,12 +14,12 @@
         <form @submit.prevent="handleLogin" class="auth-form">
           <div class="form-group">
             <label>Correo electrónico</label>
-            <input type="email" placeholder="correo@ejemplo.com" required class="input-field" />
+            <input v-model="username" type="email" placeholder="correo@ejemplo.com" required class="input-field" />
           </div>
           
           <div class="form-group">
             <label>Contraseña</label>
-            <input type="password" placeholder="••••••••" required class="input-field" />
+            <input v-model="password" type="password" placeholder="••••••••" required class="input-field" />
           </div>
           
           <div class="form-options">
@@ -29,6 +29,10 @@
             </label>
             <a href="#" class="link-primary">¿Olvidaste tu contraseña?</a>
           </div>
+
+          <p v-if="errorMessage" style="color: #dc2626; font-size: 0.9rem;">
+            {{ errorMessage }}
+          </p>
           
           <button type="submit" class="btn btn-primary btn-block">Iniciar sesión</button>
         </form>
@@ -53,15 +57,15 @@
         
         <div class="bank-options">
           <button 
-            v-for="entity in entitiesStore.entities" 
+            v-for="entity in entities"
             :key="entity.id"
             class="btn btn-block bank-btn" 
-            :style="{ borderColor: entity.themeColor, color: entity.themeColor }"
+            :style="{ borderColor: entity.themeColor || '#334155', color: entity.themeColor || '#334155' }"
             @click="handleBankLogin(entity.id)"
-            @mouseover="e => { e.target.style.backgroundColor = entity.themeColor; e.target.style.color = 'white'; }"
-            @mouseleave="e => { e.target.style.backgroundColor = 'white'; e.target.style.color = entity.themeColor; }"
+            @mouseover="e => { e.target.style.backgroundColor = entity.themeColor || '#334155'; e.target.style.color = 'white'; }"
+            @mouseleave="e => { e.target.style.backgroundColor = 'white'; e.target.style.color = entity.themeColor || '#334155'; }"
           >
-            <span class="icon">🏦</span> Ingresar como {{ entity.name }}
+            <span class="icon">🏦</span> Ingresar como {{ entity.name || 'Entidad Desconocida' }}
           </button>
         </div>
       </div>
@@ -92,15 +96,36 @@ import { useRouter } from 'vue-router';
 import AuthLayout from '../layouts/AuthLayout.vue';
 import { useAuthStore } from '../../application/useAuthStore';
 import { useEntitiesStore } from '../../../frontend/entidad-financiera/application/useEntitiesStore';
+import {loginRequest} from '../../../frontend/shared/api/altoqueApi';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const entitiesStore = useEntitiesStore();
+const { entities } = useEntitiesStore();
 const tab = ref('client');
 
-const handleLogin = () => {
-  authStore.loginAsClient('Alex Mercer', 'alex@ejemplo.com');
-  router.push('/inicio');
+const username = ref('');
+const password = ref('');
+const errorMessage = ref('');
+const isLoading = ref(false);
+
+const handleLogin = async () => {
+  try {
+    errorMessage.value = '';
+    isLoading.value = true;
+
+    const data = await loginRequest(username.value, password.value);
+
+    authStore.loginWithBackend({
+      token: data.token,
+      user: data.user
+    });
+
+    router.push('/inicio');
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const handleGoogleLogin = () => {

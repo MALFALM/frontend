@@ -8,6 +8,7 @@ import {
     calculateTCEA 
 } from '../domain/financialCalculations.js';
 import { useEntitiesStore } from '../../entidad-financiera/application/useEntitiesStore.js';
+import { useAuthStore } from '../../../login/application/useAuthStore.js';
 
 // ---- GLOBAL STATE (Shared across all components) ----
 // Intentamos cargar desde localStorage al inicio
@@ -25,15 +26,27 @@ const loadInitialState = () => {
 const savedState = loadInitialState() || {};
 
 // Historial de Simulaciones Guardadas
-const HISTORY_KEY = 'altoque_saved_simulations';
-const loadHistory = () => {
+const BASE_HISTORY_KEY = 'altoque_saved_simulations';
+const savedSimulationsList = ref([]);
+
+const getHistoryKey = (user) => {
+    const userIdentifier = user?.id_user || user?.username || 'guest';
+    return `${BASE_HISTORY_KEY}_${userIdentifier}`;
+};
+
+const loadHistoryByUser = (user) => {
     try {
-        const saved = localStorage.getItem(HISTORY_KEY);
+        const saved = localStorage.getItem(getHistoryKey(user));
         if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) {
+        console.error('Error loading history', e);
+    }
     return [];
 };
-const savedSimulationsList = ref(loadHistory());
+
+const saveHistoryByUser = (user, history) => {
+    localStorage.setItem(getHistoryKey(user), JSON.stringify(history));
+};
 
 // Configuración Entidad / Producto
 const selectedEntityId = ref(savedState.selectedEntityId || 'custom');
@@ -96,6 +109,19 @@ watch([
 
 export function useCreditSimulator() {
     const { entities: financialEntities } = useEntitiesStore();
+
+    const authStore = useAuthStore();
+
+    savedSimulationsList.value = loadHistoryByUser(authStore.user.value);
+
+    watch(
+        () => authStore.user.value,
+        (newUser) => {
+            savedSimulationsList.value = loadHistoryByUser(newUser);
+        },
+        { immediate: true }
+    );
+
 
     // Lógica de Bloqueo por Banco
     const isProductLocked = computed(() => selectedProductId.value !== 'custom');
@@ -291,13 +317,13 @@ export function useCreditSimulator() {
         };
         
         savedSimulationsList.value.unshift(sim); // Agregar al inicio
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(savedSimulationsList.value));
-        return sim;
+saveHistoryByUser(authStore.user.value, savedSimulationsList.value);
+return sim;
     };
 
     const deleteSimulation = (id) => {
         savedSimulationsList.value = savedSimulationsList.value.filter(s => s.id !== id);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(savedSimulationsList.value));
+        saveHistoryByUser(authStore.user.value, savedSimulationsList.value);
     };
 
     const loadSimulation = (sim) => {

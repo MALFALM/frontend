@@ -20,23 +20,23 @@
       <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
           <label>Nombre completo</label>
-          <input type="text" placeholder="Ej: Juan Pérez" required class="input-field" />
+          <input v-model="fullName" type="text" placeholder="Ej: Juan Pérez" required class="input-field" />
         </div>
         
         <div class="form-group">
           <label>Correo electrónico</label>
-          <input type="email" placeholder="correo@ejemplo.com" required class="input-field" />
+          <input v-model="email" type="email" placeholder="correo@ejemplo.com" required class="input-field" />
           <span v-if="role === 'entidad'" class="field-hint">Usa el correo corporativo proporcionado por el banco.</span>
         </div>
         
         <div class="form-group">
           <label>Contraseña</label>
-          <input type="password" placeholder="••••••••" required class="input-field" />
+          <input v-model="password" type="password" placeholder="••••••••" required class="input-field" />
         </div>
         
         <div class="form-group">
           <label>Confirmar contraseña</label>
-          <input type="password" placeholder="••••••••" required class="input-field" />
+          <input v-model="confirmPassword" type="password" placeholder="••••••••" required class="input-field" />
         </div>
         
         <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
@@ -54,6 +54,10 @@
       <p class="auth-footer">
         ¿Ya tienes cuenta? <router-link to="/login" class="link-primary font-bold">Inicia sesión</router-link>
       </p>
+
+      <div v-if="toastMessage" class="toast-notification" :class="toastType">
+        {{ toastMessage }}
+      </div>
     </div>
   </AuthLayout>
 </template>
@@ -65,9 +69,72 @@ import AuthLayout from '../layouts/AuthLayout.vue';
 
 const router = useRouter();
 const role = ref('cliente');
+const fullName = ref('');
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
 
-const handleRegister = () => {
-  router.push('/inicio');
+const toastMessage = ref('');
+const toastType = ref('success');
+const isLoading = ref(false);
+
+const showToast = (message, type = 'success') => {
+  toastMessage.value = message;
+  toastType.value = type;
+
+  setTimeout(() => {
+    toastMessage.value = '';
+  }, 3000);
+};
+
+const getBackendRole = () => {
+  if (role.value === 'entidad') return 'bank';
+  return 'client';
+};
+
+const handleRegister = async () => {
+  try {
+    toastMessage.value = '';
+    isLoading.value = true;
+
+    if (password.value !== confirmPassword.value) {
+      throw new Error('Las contraseñas no coinciden');
+    }
+
+    if (password.value.length < 8) {
+      throw new Error('La contraseña debe tener mínimo 8 caracteres');
+    }
+
+    const response = await fetch('http://localhost:3000/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: email.value,
+        password: password.value,
+        rol: getBackendRole(),
+        name: fullName.value
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'No se pudo crear la cuenta');
+    }
+
+    showToast('Cuenta creada correctamente', 'success');
+
+    setTimeout(() => {
+      router.push('/login');
+    }, 1000);
+
+  } catch (error) {
+    showToast(error.message || 'No se pudo crear la cuenta', 'error');
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const handleGoogleRegister = () => {
@@ -76,6 +143,40 @@ const handleGoogleRegister = () => {
 </script>
 
 <style scoped>
+
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  animation: slideIn 0.25s ease-out;
+}
+
+.toast-notification.success {
+  background-color: #16a34a;
+}
+
+.toast-notification.error {
+  background-color: #dc2626;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 .register-view {
   width: 100%;
   max-width: 400px;

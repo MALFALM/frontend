@@ -311,6 +311,8 @@ import {
   LinearScale
 } from 'chart.js';
 import { Bar } from 'vue-chartjs';
+import { saveCreditRequest } from '../../../shared/api/altoqueApi';
+import { useAuthStore } from '../../../../login/application/useAuthStore';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -348,10 +350,94 @@ const {
 
 const saveMessage = ref('');
 
-const handleSave = () => {
-  saveCurrentSimulation();
-  saveMessage.value = '¡Simulación guardada en tu historial!';
-  setTimeout(() => { saveMessage.value = ''; }, 3000);
+const authStore = useAuthStore();
+const isSaving = ref(false);
+
+const handleSave = async () => {
+  try {
+    isSaving.value = true;
+    saveMessage.value = '';
+
+    const currentUser = authStore.user.value;
+
+    if (!currentUser || !currentUser.id_user) {
+      throw new Error('Debes iniciar sesión antes de guardar la simulación.');
+    }
+
+    const timestamp = Date.now().toString().slice(-8);
+
+    const payload = {
+      userId: currentUser.id_user,
+      cliente: {
+        tipoDocumento: 'DNI',
+        numeroDocumento: timestamp,
+        nombres: currentUser.username || 'Cliente',
+        apellidos: 'Simulado',
+        telefono: `9${timestamp}`,
+        ingresoMensual: 3500,
+        correo: `${currentUser.username || 'cliente'}${timestamp}@altoque.com`
+      },
+      vehiculo: {
+        marca: 'Vehículo',
+        modelo: 'Simulado',
+        yearFabricacion: '2026',
+        precioVenta: Number(vehiclePrice.value),
+        tipoMoneda: currency.value
+      },
+      credito: {
+        vehiclePrice: Number(vehiclePrice.value),
+        currency: currency.value,
+        downPaymentPercentage: Number(downPaymentPercentage.value),
+        periods: Number(periods.value),
+        rateType: rateType.value,
+        rateValue: Number(rateValue.value),
+        capitalization: Number(capitalization.value),
+        hasVehicularInsurance: hasVehicularInsurance.value,
+        vehicularInsurancePercentage: 0.25,
+        hasDesgravamen: hasDesgravamen.value,
+        desgravamenRate: Number(desgravamenRate.value),
+        hasPortes: hasPortes.value,
+        portesValue: 15,
+        gracePeriodsTotal: Number(gracePeriodsTotal.value),
+        gracePeriodsPartial: Number(gracePeriodsPartial.value),
+        residualValue: Number(residualValue.value)
+      },
+      summary: {
+        loanAmount: Number(loanAmount.value),
+        monthlyRate: 0,
+        monthlyPayment: Number(metrics.value.monthlyPayment),
+        van: Number(metrics.value.van),
+        tirMonthly: Number(metrics.value.tir / 12),
+        tirAnnual: Number(metrics.value.tir),
+        tcea: Number(metrics.value.tcea),
+        totalPaid: schedule.value.reduce((sum, item) => sum + item.totalQuota, 0),
+        totalInterest: schedule.value.reduce((sum, item) => sum + item.interest, 0),
+        totalDesgravamen: schedule.value.reduce((sum, item) => sum + (item.desgravamen || 0), 0),
+        totalFixedCharges: 0
+      },
+      schedule: schedule.value.map((item) => ({
+        ...item,
+        finalBalance: Number(item.finalBalance ?? (item.initialBalance - item.amortization)),
+        desgravamen: Number(item.desgravamen ?? 0),
+        fixedCharges: Number(item.fixedCharges ?? 0),
+        insurance: Number(item.insurance ?? 0),
+        totalQuota: Number(item.totalQuota ?? 0),
+        interest: Number(item.interest ?? 0),
+        amortization: Number(item.amortization ?? 0),
+        initialBalance: Number(item.initialBalance ?? 0)
+      }))
+    };
+
+    await saveCreditRequest(payload);
+
+    saveCurrentSimulation();
+    saveMessage.value = '¡Simulación guardada en MySQL y en tu historial!';
+  } catch (error) {
+    saveMessage.value = error.message;
+  } finally {
+    isSaving.value = false;
+    setTimeout(() => { saveMessage.value = ''; }, 4000);
+  }
 };
 
 const formatMoney = (val) => {

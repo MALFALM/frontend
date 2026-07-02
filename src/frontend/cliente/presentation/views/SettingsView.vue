@@ -79,7 +79,7 @@
 import { ref, computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
 
-const { profileImage, userName, userEmail } = useProfile();
+const { profileImage, userName, userEmail, updateProfile  } = useProfile();
 
 const passwords = ref({
   current: '',
@@ -92,6 +92,25 @@ const toastMessage = ref('');
 const showToast = (msg) => {
   toastMessage.value = msg;
   setTimeout(() => { toastMessage.value = ''; }, 3000);
+};
+
+const saveProfile = () => {
+  updateProfile({
+    name: userName.value,
+    profileImage: profileImage.value
+  });
+
+  showToast('¡Perfil actualizado con éxito!');
+};
+
+const removeProfileImage = () => {
+  profileImage.value = null;
+  updateProfile({
+    name: userName.value,
+    profileImage: null
+  });
+
+  showToast('Foto de perfil eliminada');
 };
 
 const handleImageUpload = (event) => {

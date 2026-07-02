@@ -47,12 +47,50 @@ export function useAuthStore() {
         localStorage.removeItem(STORAGE_KEY);
     };
 
+    const loginWithBackend = ({ token, user }) => {
+        const newSession = {
+            role: user.rol,
+            id_user: user.id_user,
+            username: user.username,
+            token
+        };
+        
+        session.value = newSession;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+    };
+
+    const updateCurrentUser = (updatedData) => {
+        if (!session.value) return;
+        
+        const updatedSession = {
+            ...session.value,
+            ...updatedData
+        };
+        
+        session.value = updatedSession;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
+    };
+
     return {
         user,
         isLoggedIn,
+        loginWithBackend,
         loginAsBank,
         loginAsClient,
         loginAsAdmin,
+        updateCurrentUser,
         logout
     };
 }
+
+const loginWithBackend = ({ token, user }) => {
+    const newSession = {
+        role: user.rol,
+        id_user: user.id_user,
+        username: user.username,
+        token
+    };
+
+    session.value = newSession;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+};
