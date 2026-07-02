@@ -46,3 +46,11 @@ npm run dev
 # Compilar para producción
 npm run build
 ```
+
+```bash
+git clone https://github.com/MALFALM/frontend.git
+cd frontend
+git checkout feature/front-back-final
+npm install
+npm run dev
+```
