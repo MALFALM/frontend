@@ -53,15 +53,15 @@
         
         <div class="bank-options">
           <button 
-            v-for="entity in entitiesStore.entities" 
+            v-for="entity in entities" 
             :key="entity.id"
             class="btn btn-block bank-btn" 
-            :style="{ borderColor: entity.themeColor, color: entity.themeColor }"
+            :style="{ borderColor: entity.themeColor || '#334155', color: entity.themeColor || '#334155' }"
             @click="handleBankLogin(entity.id)"
-            @mouseover="e => { e.target.style.backgroundColor = entity.themeColor; e.target.style.color = 'white'; }"
-            @mouseleave="e => { e.target.style.backgroundColor = 'white'; e.target.style.color = entity.themeColor; }"
+            @mouseover="e => { e.target.style.backgroundColor = entity.themeColor || '#334155'; e.target.style.color = 'white'; }"
+            @mouseleave="e => { e.target.style.backgroundColor = 'white'; e.target.style.color = entity.themeColor || '#334155'; }"
           >
-            <span class="icon">🏦</span> Ingresar como {{ entity.name }}
+            <span class="icon">🏦</span> Ingresar como {{ entity.name || 'Entidad Desconocida' }}
           </button>
         </div>
       </div>
@@ -95,7 +95,7 @@ import { useEntitiesStore } from '../../../frontend/entidad-financiera/applicati
 
 const router = useRouter();
 const authStore = useAuthStore();
-const entitiesStore = useEntitiesStore();
+const { entities } = useEntitiesStore();
 const tab = ref('client');
 
 const handleLogin = () => {
