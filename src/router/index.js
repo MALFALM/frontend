@@ -50,6 +50,11 @@ const routes = [
         path: 'ajustes',
         name: 'AjustesPerfil',
         component: () => import('../frontend/cliente/presentation/views/SettingsView.vue')
+      },
+      {
+        path: 'soporte',
+        name: 'ClientSupport',
+        component: () => import('../frontend/cliente/presentation/views/ClientSupportView.vue')
       }
     ]
   },
@@ -76,6 +81,11 @@ const routes = [
         path: 'ajustes',
         name: 'BankSettings',
         component: () => import('../frontend/entidad-financiera/presentation/views/BankSettingsView.vue')
+      },
+      {
+        path: 'soporte',
+        name: 'BankSupport',
+        component: () => import('../frontend/entidad-financiera/presentation/views/BankSupportView.vue')
       }
     ]
   },
@@ -97,6 +107,11 @@ const routes = [
         path: 'usuarios',
         name: 'AdminUsers',
         component: () => import('../frontend/admin/presentation/views/AdminUsersView.vue')
+      },
+      {
+        path: 'soporte',
+        name: 'AdminSupport',
+        component: () => import('../frontend/admin/presentation/views/AdminSupportView.vue')
       }
     ]
   }
