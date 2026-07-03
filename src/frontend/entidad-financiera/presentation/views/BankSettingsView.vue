@@ -2,9 +2,11 @@
 import { ref, computed, watch } from 'vue';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
+import { useAdminNotificationsStore } from '../../../admin/application/useAdminNotificationsStore';
 
 const authStore = useAuthStore();
 const { getEntityById, updateEntity } = useEntitiesStore();
+const { addNotification } = useAdminNotificationsStore();
 
 const BANK_ID = computed(() => authStore.user.value?.bankId || 'bcp');
 const bankEntity = computed(() => getEntityById(BANK_ID.value));
@@ -18,6 +20,21 @@ const saveSettings = () => {
     updateEntity(updatedEntity);
     saveMessage.value = 'Configuración guardada exitosamente';
     setTimeout(() => saveMessage.value = '', 3000);
+  }
+};
+
+const showSuspendModal = ref(false);
+
+const handleSuspendRequest = () => {
+  if (bankEntity.value) {
+    addNotification({
+      type: 'suspension_request',
+      bankId: bankEntity.value.id,
+      bankName: bankEntity.value.name,
+      message: `El banco ${bankEntity.value.name} ha solicitado la suspensión temporal de su cuenta.`
+    });
+    showSuspendModal.value = false;
+    alert('Solicitud enviada. El administrador procesará su petición pronto.');
   }
 };
 </script>
@@ -45,6 +62,41 @@ const saveSettings = () => {
       <div class="action-footer mt-4">
         <button class="btn btn-primary" @click="saveSettings">Guardar Cambios</button>
         <span class="success-message" v-if="saveMessage">{{ saveMessage }}</span>
+      </div>
+    </div>
+    
+    <div class="card mt-4 text-left danger-zone">
+      <h3 class="text-danger">Zona de Peligro</h3>
+      <p class="subtitle mb-4">Acciones críticas sobre tu cuenta institucional.</p>
+      
+      <div class="suspend-container">
+        <div>
+          <h4 style="color: #c9d1d9; margin-bottom: 4px;">Suspender Cuenta</h4>
+          <p class="helper-text">Pausar temporalmente las operaciones y simulaciones con tu banco.</p>
+        </div>
+        <button class="btn btn-outline-danger" @click="showSuspendModal = true">Solicitar Suspensión</button>
+      </div>
+    </div>
+
+    <!-- Modal Confirmación Suspensión -->
+    <div v-if="showSuspendModal" class="modal-overlay" @click.self="showSuspendModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Solicitar Suspensión de Cuenta</h3>
+          <button class="close-btn" @click="showSuspendModal = false">✕</button>
+        </div>
+        <div class="modal-body text-left">
+          <p style="color: #64748b; line-height: 1.5;">
+            ¿Estás seguro de que deseas suspender la cuenta de <strong>{{ bankEntity?.name }}</strong>?
+          </p>
+          <p style="color: #ef4444; font-size: 0.9rem; margin-top: 12px; font-weight: 500;">
+            Esto enviará una notificación a Altoque para que el Super Administrador evalúe y ejecute la pausa temporal de sus productos.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" @click="showSuspendModal = false">Cancelar</button>
+          <button class="btn btn-danger" @click="handleSuspendRequest">Sí, enviar solicitud</button>
+        </div>
       </div>
     </div>
   </div>
@@ -155,5 +207,99 @@ const saveSettings = () => {
 
 .mt-4 {
   margin-top: 24px;
+}
+
+.danger-zone {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.text-danger {
+  color: #ef4444 !important;
+}
+
+.suspend-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #30363d;
+}
+
+.btn-outline-danger {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.btn-outline-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(13, 17, 23, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background-color: #161b22;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid #30363d;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #c9d1d9;
+  font-size: 1.1rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #8b949e;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 24px 20px;
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #30363d;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>
