@@ -19,7 +19,12 @@
           
           <div class="form-group">
             <label>Contraseña</label>
-            <input type="password" placeholder="••••••••" required class="input-field" />
+            <div class="input-wrapper">
+              <input :type="showClientPassword ? 'text' : 'password'" placeholder="••••••••" required class="input-field" style="width: 100%; padding-right: 40px;" />
+              <button type="button" class="eye-btn" @click="showClientPassword = !showClientPassword">
+                {{ showClientPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
           </div>
           
           <div class="form-options">
@@ -33,14 +38,7 @@
           <button type="submit" class="btn btn-primary btn-block">Iniciar sesión</button>
         </form>
         
-        <div class="divider">
-          <span>o continuar con</span>
-        </div>
-        
-        <button class="btn btn-outline btn-block google-btn" @click="handleGoogleLogin">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="google-icon" />
-          Continuar con Google
-        </button>
+
         
         <p class="auth-footer">
           ¿No tienes cuenta? <router-link to="/register" class="link-primary font-bold">Regístrate</router-link>
@@ -51,19 +49,33 @@
         <h2 class="view-title">Portal Financiero</h2>
         <p class="view-subtitle">Selecciona tu entidad financiera para administrar tus productos y campañas.</p>
         
-        <div class="bank-options">
-          <button 
-            v-for="entity in entities" 
-            :key="entity.id"
-            class="btn btn-block bank-btn" 
-            :style="{ borderColor: entity.themeColor || '#334155', color: entity.themeColor || '#334155' }"
-            @click="handleBankLogin(entity.id)"
-            @mouseover="e => { e.target.style.backgroundColor = entity.themeColor || '#334155'; e.target.style.color = 'white'; }"
-            @mouseleave="e => { e.target.style.backgroundColor = 'white'; e.target.style.color = entity.themeColor || '#334155'; }"
-          >
-            <span class="icon">🏦</span> Ingresar como {{ entity.name || 'Entidad Desconocida' }}
-          </button>
-        </div>
+        <form @submit.prevent="handleBankLoginSubmit" class="auth-form">
+          <div class="form-group">
+            <label>Correo corporativo</label>
+            <input type="email" v-model="bankEmail" placeholder="correo@nombredelbancom.com.pe" required class="input-field" />
+          </div>
+          
+          <div class="form-group">
+            <label>Contraseña</label>
+            <div class="input-wrapper">
+              <input :type="showBankPassword ? 'text' : 'password'" placeholder="••••••••" required class="input-field" style="width: 100%; padding-right: 40px;" />
+              <button type="button" class="eye-btn" @click="showBankPassword = !showBankPassword">
+                {{ showBankPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
+          </div>
+          
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input type="checkbox" />
+              <span>Recordarme</span>
+            </label>
+            <a href="#" class="link-primary">¿Olvidaste tu contraseña?</a>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-block">Ingresar como Entidad</button>
+          <div v-if="bankLoginError" class="error-text mt-2">{{ bankLoginError }}</div>
+        </form>
       </div>
 
       <div v-if="tab === 'admin'" class="tab-content">
@@ -77,7 +89,12 @@
           </div>
           <div class="form-group">
             <label>Contraseña maestra</label>
-            <input type="password" placeholder="••••••••" required class="input-field" />
+            <div class="input-wrapper">
+              <input :type="showAdminPassword ? 'text' : 'password'" placeholder="••••••••" required class="input-field" style="width: 100%; padding-right: 40px;" />
+              <button type="button" class="eye-btn" @click="showAdminPassword = !showAdminPassword">
+                {{ showAdminPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary btn-block" style="background-color: #000; border-color: #000;">Ingresar a la Consola</button>
         </form>
@@ -97,20 +114,37 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { entities } = useEntitiesStore();
 const tab = ref('client');
+const showClientPassword = ref(false);
+const showBankPassword = ref(false);
+const showAdminPassword = ref(false);
+
+const bankEmail = ref('');
+const bankLoginError = ref('');
 
 const handleLogin = () => {
   authStore.loginAsClient('Alex Mercer', 'alex@ejemplo.com');
   router.push('/inicio');
 };
 
-const handleGoogleLogin = () => {
-  authStore.loginAsClient('Alex Mercer', 'alex@gmail.com');
-  router.push('/inicio');
-};
-
-const handleBankLogin = (bankId) => {
-  authStore.loginAsBank(bankId);
-  router.push('/banco');
+const handleBankLoginSubmit = () => {
+  bankLoginError.value = '';
+  if (!bankEmail.value || !bankEmail.value.includes('@')) {
+    bankLoginError.value = 'Ingresa un correo válido.';
+    return;
+  }
+  
+  const domain = bankEmail.value.split('@')[1].toLowerCase();
+  
+  // Buscar en las entidades si alguna coincide con el dominio
+  // Ejemplo: "bcp" -> bcp.com.pe, "bbva" -> bbva.com.pe
+  const matchedBank = entities.value.find(b => domain.includes(b.id.toLowerCase()));
+  
+  if (matchedBank) {
+    authStore.loginAsBank(matchedBank.id);
+    router.push('/banco');
+  } else {
+    bankLoginError.value = 'El correo no corresponde a ninguna entidad financiera registrada.';
+  }
 };
 
 const handleAdminLogin = () => {
@@ -159,6 +193,16 @@ const handleAdminLogin = () => {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 8px;
+}
+.mt-2 {
+  margin-top: 16px;
 }
 
 .view-title {
@@ -299,5 +343,30 @@ const handleAdminLogin = () => {
 
 .bank-btn .icon {
   font-size: 1.25rem;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-btn:hover {
+  opacity: 1;
 }
 </style>
