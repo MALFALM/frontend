@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 
-const { getProductsByEntityId, updateProduct } = useEntitiesStore();
+const { getProductsByEntityId, updateProduct, addProduct } = useEntitiesStore();
 const authStore = useAuthStore();
 
 const BANK_ID = computed(() => authStore.user.value?.bankId || 'bcp');
@@ -31,6 +31,24 @@ const saveField = (product) => {
   
   updateProduct(BANK_ID.value, product);
   stopEditing();
+};
+
+const handleAddProduct = () => {
+  const newProduct = {
+    id: `custom_${Date.now()}`,
+    name: 'Nuevo Producto',
+    rateType: 'TEA',
+    rateValue: 15,
+    capitalization: 1,
+    hasDesgravamen: true,
+    desgravamenRate: 0.05,
+    hasVehicularInsurance: true,
+    vehicularInsurancePercentage: 0.1,
+    hasPortes: true,
+    portesValue: 5.0,
+    promotions: []
+  };
+  addProduct(BANK_ID.value, newProduct);
 };
 </script>
 
@@ -144,7 +162,10 @@ const saveField = (product) => {
 
           </tr>
           <tr v-if="myProducts.length === 0">
-            <td colspan="6" class="text-center" style="padding: 32px; color: #8b949e;">No tienes productos configurados.</td>
+            <td colspan="6" class="text-center" style="padding: 32px; color: #8b949e;">
+              <p style="margin-bottom: 16px;">No tienes productos configurados.</p>
+              <button class="btn btn-primary" @click="handleAddProduct">+ Agregar Producto Financiero</button>
+            </td>
           </tr>
         </tbody>
       </table>
