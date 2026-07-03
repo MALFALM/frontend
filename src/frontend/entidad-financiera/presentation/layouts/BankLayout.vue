@@ -53,6 +53,10 @@ const logout = () => {
           <span class="icon">🎁</span>
           <span>Mis Promos</span>
         </router-link>
+        <router-link to="/banco/soporte" class="nav-item" active-class="active">
+          <span class="icon">🎧</span>
+          <span>Soporte</span>
+        </router-link>
         <router-link to="/banco/ajustes" class="nav-item" active-class="active">
           <span class="icon">⚙</span>
           <span>Configuración</span>
