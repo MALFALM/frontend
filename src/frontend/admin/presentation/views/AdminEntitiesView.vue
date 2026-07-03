@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { useEntitiesStore } from '../../../entidad-financiera/application/useEntitiesStore';
 import { useAdminNotificationsStore } from '../../application/useAdminNotificationsStore';
 
-const { entities, addEntity } = useEntitiesStore();
+const { entities, addEntity, toggleSuspendEntity } = useEntitiesStore();
 const { notifications } = useAdminNotificationsStore();
 
 const suspendingBankIds = computed(() => {
@@ -91,12 +91,14 @@ const closeCredentialsModal = () => {
             </td>
             <td>{{ entity.products ? entity.products.length : 0 }} activos</td>
             <td>
-              <span class="status-badge" :class="suspendingBankIds.includes(entity.id) ? 'warning' : 'active'">
-                {{ suspendingBankIds.includes(entity.id) ? 'En revisión' : 'Activo' }}
+              <span class="status-badge" :class="entity.isSuspended ? 'danger' : (suspendingBankIds.includes(entity.id) ? 'warning' : 'active')">
+                {{ entity.isSuspended ? 'Suspendido' : (suspendingBankIds.includes(entity.id) ? 'En revisión' : 'Activo') }}
               </span>
             </td>
             <td>
-              <button class="btn btn-outline-small">Suspender</button>
+              <button class="btn btn-outline-small" @click="toggleSuspendEntity(entity.id)">
+                {{ entity.isSuspended ? 'Reactivar' : 'Suspender' }}
+              </button>
             </td>
           </tr>
           <tr v-if="entities.length === 0">
