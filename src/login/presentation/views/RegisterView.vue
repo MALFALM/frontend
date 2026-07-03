@@ -4,18 +4,7 @@
       <h2 class="view-title">Crea tu cuenta</h2>
       <p class="view-subtitle">Empieza a simular créditos en minutos.</p>
       
-      <div class="role-selector">
-        <button 
-          class="role-btn" 
-          :class="{ active: role === 'cliente' }" 
-          @click="role = 'cliente'"
-        >Cliente</button>
-        <button 
-          class="role-btn" 
-          :class="{ active: role === 'entidad' }" 
-          @click="role = 'entidad'"
-        >Entidad financiera</button>
-      </div>
+
       
       <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
@@ -26,34 +15,52 @@
         <div class="form-group">
           <label>Correo electrónico</label>
           <input type="email" placeholder="correo@ejemplo.com" required class="input-field" />
-          <span v-if="role === 'entidad'" class="field-hint">Usa el correo corporativo proporcionado por el banco.</span>
         </div>
         
         <div class="form-group">
           <label>Contraseña</label>
-          <input type="password" placeholder="••••••••" required class="input-field" />
+          <div class="input-wrapper">
+            <input :type="showPassword ? 'text' : 'password'" placeholder="••••••••" required class="input-field" style="width: 100%; padding-right: 40px;" />
+            <button type="button" class="eye-btn" @click="showPassword = !showPassword">
+              {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+            </button>
+          </div>
         </div>
         
         <div class="form-group">
           <label>Confirmar contraseña</label>
-          <input type="password" placeholder="••••••••" required class="input-field" />
+          <div class="input-wrapper">
+            <input :type="showConfirmPassword ? 'text' : 'password'" placeholder="••••••••" required class="input-field" style="width: 100%; padding-right: 40px;" />
+            <button type="button" class="eye-btn" @click="showConfirmPassword = !showConfirmPassword">
+              {{ showConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+            </button>
+          </div>
         </div>
         
         <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
       </form>
       
-      <div class="divider">
-        <span>o continuar con</span>
-      </div>
-      
-      <button class="btn btn-outline btn-block google-btn" @click="handleGoogleRegister">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="google-icon" />
-        Continuar con Google
-      </button>
+
       
       <p class="auth-footer">
         ¿Ya tienes cuenta? <router-link to="/login" class="link-primary font-bold">Inicia sesión</router-link>
       </p>
+    </div>
+
+    <!-- Modal de Términos y Condiciones -->
+    <div class="modal-overlay" v-if="showTermsModal">
+      <div class="modal-content">
+        <h3>Términos y Condiciones</h3>
+        <div class="terms-text">
+          <p>Al utilizar Altoque, aceptas nuestros términos de servicio y política de privacidad.</p>
+          <p>Tus datos personales, incluyendo tu nombre y correo electrónico, serán utilizados únicamente para proporcionarte simulaciones vehiculares precisas y permitir la comunicación con las entidades financieras que tú autorices.</p>
+          <p>No compartiremos tu información con terceros sin tu consentimiento explícito.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" @click="showTermsModal = false">Cancelar</button>
+          <button class="btn btn-primary" @click="acceptAndRegister">Aceptar y Continuar</button>
+        </div>
+      </div>
     </div>
   </AuthLayout>
 </template>
@@ -64,13 +71,16 @@ import { useRouter } from 'vue-router';
 import AuthLayout from '../layouts/AuthLayout.vue';
 
 const router = useRouter();
-const role = ref('cliente');
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+const showTermsModal = ref(false);
 
 const handleRegister = () => {
-  router.push('/inicio');
+  showTermsModal.value = true;
 };
 
-const handleGoogleRegister = () => {
+const acceptAndRegister = () => {
+  showTermsModal.value = false;
   router.push('/inicio');
 };
 </script>
@@ -205,15 +215,86 @@ const handleGoogleRegister = () => {
   padding: 10px;
 }
 
-.google-icon {
-  width: 20px;
-  height: 20px;
-}
-
 .auth-footer {
   text-align: center;
   margin-top: 24px;
   font-size: 0.875rem;
   color: var(--text-secondary);
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-btn:hover {
+  opacity: 1;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.terms-text {
+  margin: 16px 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #475569;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.terms-text p {
+  margin-bottom: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
 }
 </style>
