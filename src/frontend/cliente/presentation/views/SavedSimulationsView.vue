@@ -56,8 +56,8 @@
         </div>
 
         <div class="card-footer no-print">
-          <button @click.stop="printCard(sim.id)" class="btn btn-secondary w-100">
-            📄 Exportar a PDF (Imprimir)
+          <button @click.stop="exportToPDF(sim)" class="btn btn-secondary w-100">
+            📄 Exportar a PDF
           </button>
         </div>
       </div>
@@ -68,6 +68,8 @@
 <script setup>
 import { useCreditSimulator } from '../../application/useCreditSimulator';
 import { useRouter } from 'vue-router';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const router = useRouter();
 const { savedSimulationsList, deleteSimulation, loadSimulation } = useCreditSimulator();
@@ -81,8 +83,130 @@ const formatMoney = (val) => {
   return Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const printCard = (id) => {
-  window.print();
+const exportToPDF = (sim) => {
+  const doc = new jsPDF();
+  
+  // -- Logo Altoque --
+  const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+  const logoX = pageWidth - 50;
+  const logoY = 12;
+  const scale = 0.25;
+
+  doc.setFillColor(59, 130, 246);
+  doc.lines([[-16, 32], [8, 0], [8, -16], [8, 16], [8, 0], [-16, -32]], logoX + 20*scale, logoY + 4*scale, [scale, scale], 'F');
+  
+  doc.setFillColor(0, 180, 216);
+  doc.lines([[26, -10], [-3, -5], [-26, 10], [3, 5]], logoX + 9*scale, logoY + 25*scale, [scale, scale], 'F');
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(59, 130, 246);
+  doc.text("Altoque", logoX + 12, logoY + 6);
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(139, 148, 158);
+  doc.text("PREMIUM FINTECH", logoX + 12, logoY + 9);
+  // -- Fin Logo --
+
+  // Título
+  doc.setFontSize(18);
+  doc.setTextColor(0);
+  doc.text(`Reporte de Simulación: ${sim.name}`, 14, 22);
+  
+  // Metadatos
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(`Generado el: ${new Date(sim.date).toLocaleDateString()}`, 14, 30);
+  const entityName = sim.entity ? sim.entity.toUpperCase() : 'NO ESPECIFICADO';
+  doc.text(`Entidad Financiera: ${entityName}`, 14, 36);
+
+  // Tabla de Configuración
+  autoTable(doc, {
+    startY: 45,
+    head: [['Parámetro', 'Valor']],
+    body: [
+      ['Precio del Vehículo', `S/ ${formatMoney(sim.vehiclePrice)}`],
+      ['Cuota Inicial', `S/ ${formatMoney(sim.downPayment)}`],
+      ['Monto del Préstamo', `S/ ${formatMoney(sim.loanAmount)}`],
+      ['Plazo', `${sim.periods} meses`],
+      ['Tasa (TEA)', `${sim.rateValue || 0}%`],
+      ['TCEA', `${sim.tcea ? sim.tcea.toFixed(2) : '0.00'}%`],
+      ['Cuota Mensual Aprox.', `S/ ${formatMoney(sim.monthlyPayment)}`]
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: [59, 130, 246] },
+    margin: { top: 10 }
+  });
+
+  // Tabla de Cronograma de Pagos
+  if (sim.schedule && sim.schedule.length > 0) {
+    let finalY = doc.lastAutoTable.finalY || 45;
+    
+    // --- Gráfico Simple de Barras ---
+    if (finalY > 180) { doc.addPage(); finalY = 20; }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text('Proyección del Crédito (Evolución del Saldo)', 14, finalY + 15);
+    
+    const chartY = finalY + 25;
+    const chartHeight = 40;
+    const chartWidth = 180;
+    const maxBalance = Math.max(...sim.schedule.map(s => s.initialBalance));
+    
+    // Ejes
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.5);
+    doc.line(14, chartY + chartHeight, 14 + chartWidth, chartY + chartHeight);
+    
+    // Barras
+    const barWidth = (chartWidth - 10) / sim.schedule.length;
+    doc.setFillColor(59, 130, 246); // Azul
+    
+    sim.schedule.forEach((s, index) => {
+      const height = (s.initialBalance / maxBalance) * chartHeight;
+      const x = 15 + (index * barWidth);
+      const y = chartY + chartHeight - height;
+      if (height > 0) {
+        doc.rect(x, y, barWidth * 0.8, height, 'F');
+      }
+    });
+    
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text(`S/ ${formatMoney(maxBalance)}`, 14, chartY - 2);
+    
+    finalY = chartY + chartHeight + 10;
+    // --- Fin del Gráfico ---
+
+    if (finalY > 220) { doc.addPage(); finalY = 20; }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text('Cronograma de Pagos', 14, finalY + 15);
+    
+    const scheduleBody = sim.schedule.map(row => [
+      row.month,
+      row.type,
+      `S/ ${formatMoney(row.initialBalance)}`,
+      `S/ ${formatMoney(row.interest)}`,
+      `S/ ${formatMoney(row.amortization)}`,
+      `S/ ${formatMoney(row.insurance)}`,
+      `S/ ${formatMoney(row.totalQuota)}`
+    ]);
+
+    autoTable(doc, {
+      startY: finalY + 20,
+      head: [['N°', 'Tipo', 'Saldo Ini.', 'Interés', 'Amortización', 'Seguros', 'Cuota']],
+      body: scheduleBody,
+      theme: 'grid',
+      headStyles: { fillColor: [33, 38, 45] },
+      styles: { fontSize: 8 }
+    });
+  }
+
+  doc.save(`Simulacion_${sim.name.replace(/\s+/g, '_')}.pdf`);
 };
 </script>
 
