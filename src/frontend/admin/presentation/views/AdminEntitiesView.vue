@@ -1,10 +1,20 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useEntitiesStore } from '../../../entidad-financiera/application/useEntitiesStore';
+import { useAdminNotificationsStore } from '../../application/useAdminNotificationsStore';
 
 const { entities, addEntity } = useEntitiesStore();
+const { notifications } = useAdminNotificationsStore();
+
+const suspendingBankIds = computed(() => {
+  return notifications.value
+    .filter(n => n.type === 'suspension_request')
+    .map(n => n.bankId);
+});
 
 const showModal = ref(false);
+const showCredentialsModal = ref(false);
+const generatedCredentials = ref(null);
 const newEntity = ref({
   name: '',
   id: '',
@@ -26,9 +36,21 @@ const handleSave = () => {
       products: []
     });
     
+    // Generar credenciales mock
+    const email = `admin@${newEntity.value.id}.com`;
+    const password = Math.random().toString(36).slice(-8);
+    generatedCredentials.value = { email, password, name: newEntity.value.name };
+    
     showModal.value = false;
+    showCredentialsModal.value = true;
+    
     newEntity.value = { name: '', id: '', themeColor: '#000000' };
   }
+};
+
+const closeCredentialsModal = () => {
+  showCredentialsModal.value = false;
+  generatedCredentials.value = null;
 };
 </script>
 
@@ -55,11 +77,12 @@ const handleSave = () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entity in entities" :key="entity.id">
+          <tr v-for="entity in entities" :key="entity.id" :class="{ 'suspension-row': suspendingBankIds.includes(entity.id) }">
             <td class="font-bold">
               <div class="bank-name-col">
                 <div class="color-dot" :style="{ backgroundColor: entity.themeColor || '#ccc' }"></div>
                 {{ entity.name }}
+                <span v-if="suspendingBankIds.includes(entity.id)" title="Solicitud de suspensión pendiente">⚠️</span>
               </div>
             </td>
             <td class="text-gray">{{ entity.id }}</td>
@@ -68,7 +91,9 @@ const handleSave = () => {
             </td>
             <td>{{ entity.products ? entity.products.length : 0 }} activos</td>
             <td>
-              <span class="status-badge active">Activo</span>
+              <span class="status-badge" :class="suspendingBankIds.includes(entity.id) ? 'warning' : 'active'">
+                {{ suspendingBankIds.includes(entity.id) ? 'En revisión' : 'Activo' }}
+              </span>
             </td>
             <td>
               <button class="btn btn-outline-small">Suspender</button>
@@ -113,6 +138,35 @@ const handleSave = () => {
         <div class="modal-footer">
           <button class="btn btn-ghost" @click="showModal = false">Cancelar</button>
           <button class="btn btn-primary" @click="handleSave" :disabled="!newEntity.name || !newEntity.id">Guardar Entidad</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal Credenciales Generadas (Mock) -->
+    <div v-if="showCredentialsModal" class="modal-overlay" @click.self="closeCredentialsModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>¡Banco Creado Exitosamente!</h3>
+          <button class="close-btn" @click="closeCredentialsModal">✕</button>
+        </div>
+        
+        <div class="modal-body text-center">
+          <div style="font-size: 3rem; margin-bottom: 16px;">✉️</div>
+          <p style="color: #64748b; margin-bottom: 16px;">
+            El banco <strong>{{ generatedCredentials.name }}</strong> ha sido registrado. 
+            Como esto es un entorno de simulación, estas son las credenciales generadas para ingresar:
+          </p>
+          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1; text-align: left;">
+            <p><strong>Correo corporativo:</strong> {{ generatedCredentials.email }}</p>
+            <p><strong>Contraseña:</strong> {{ generatedCredentials.password }}</p>
+          </div>
+          <p style="color: #ef4444; font-size: 0.85rem; margin-top: 16px;">
+            En producción, estas credenciales serían enviadas por correo electrónico al representante del banco, ya que el sistema no admite el registro directo de entidades.
+          </p>
+        </div>
+        
+        <div class="modal-footer" style="justify-content: center;">
+          <button class="btn btn-primary" @click="closeCredentialsModal">Entendido</button>
         </div>
       </div>
     </div>
@@ -251,6 +305,19 @@ const handleSave = () => {
 .status-badge.active {
   background-color: rgba(16, 185, 129, 0.1);
   color: #10b981;
+}
+
+.status-badge.warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.suspension-row {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+.suspension-row td {
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .mt-4 { margin-top: 24px; }
