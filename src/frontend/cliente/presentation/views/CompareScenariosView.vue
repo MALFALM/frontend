@@ -13,7 +13,7 @@
           <select v-model="selectedSimId" class="custom-select">
             <option value="" disabled>Elige una simulación de tu historial...</option>
             <option v-for="sim in savedSimulationsList" :key="sim.id" :value="sim.id">
-              {{ sim.name }} ({{ sim.entity.toUpperCase() }}) - S/ {{ formatMoney(sim.monthlyPayment) }}/mes
+              {{ sim.name }} ({{ sim.entity ? sim.entity.toUpperCase() : 'N/A' }}) - S/ {{ formatMoney(sim.monthlyPayment) }}/mes
             </option>
           </select>
           <button @click="addToCompare" :disabled="!selectedSimId || compareList.length >= 3" class="btn btn-primary">
@@ -38,7 +38,7 @@
             <th v-for="(sim, index) in compareList" :key="sim.id" class="sim-col">
               <div class="col-header">
                 <h4>{{ sim.name }}</h4>
-                <span class="badge">{{ sim.entity.toUpperCase() }}</span>
+                <span class="badge">{{ sim.entity ? sim.entity.toUpperCase() : 'N/A' }}</span>
                 <button @click="removeFromCompare(index)" class="btn-remove">✖</button>
               </div>
             </th>
@@ -73,7 +73,7 @@
           <tr>
             <td class="feature-col highlight-cell">TCEA (Costo Real)</td>
             <td v-for="sim in compareList" :key="'tc'+sim.id" class="highlight-cell text-warning font-bold">
-              {{ sim.tcea.toFixed(2) }}%
+              {{ sim.tcea ? sim.tcea.toFixed(2) : '0.00' }}%
             </td>
           </tr>
 
