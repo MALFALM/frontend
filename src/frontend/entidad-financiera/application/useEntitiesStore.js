@@ -50,6 +50,13 @@ export function useEntitiesStore() {
     entities.value.push(newEntity);
   };
 
+  const toggleSuspendEntity = (id) => {
+    const entity = getEntityById(id);
+    if (entity) {
+      entity.isSuspended = !entity.isSuspended;
+    }
+  };
+
   const updateProduct = (entityId, updatedProduct) => {
     const entity = getEntityById(entityId);
     if (entity) {
@@ -95,6 +102,7 @@ export function useEntitiesStore() {
     getProductsByEntityId,
     updateEntity,
     addEntity,
+    toggleSuspendEntity,
     updateProduct,
     addProduct,
     getAllActivePromotions
