@@ -140,6 +140,10 @@ const handleBankLoginSubmit = () => {
   const matchedBank = entities.value.find(b => domain.includes(b.id.toLowerCase()));
   
   if (matchedBank) {
+    if (matchedBank.isSuspended) {
+      bankLoginError.value = 'Esta cuenta se encuentra suspendida. Contacte al administrador.';
+      return;
+    }
     authStore.loginAsBank(matchedBank.id);
     router.push('/banco');
   } else {
