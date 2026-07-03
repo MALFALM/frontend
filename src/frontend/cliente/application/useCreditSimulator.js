@@ -287,7 +287,8 @@ export function useCreditSimulator() {
             rateType: rateType.value,
             rateValue: rateValue.value,
             tcea: metrics.value.tcea,
-            monthlyPayment: metrics.value.monthlyPayment
+            monthlyPayment: metrics.value.monthlyPayment,
+            schedule: schedule.value // GUARDAR EL CRONOGRAMA AQUÍ
         };
         
         savedSimulationsList.value.unshift(sim); // Agregar al inicio
