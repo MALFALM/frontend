@@ -1,0 +1,11 @@
+import { jsPDF } from 'jspdf';
+const doc = new jsPDF();
+const pageWidth = doc.internal.pageSize.width;
+const x = pageWidth - 50;
+const y = 12;
+const scale = 0.25;
+doc.setFillColor(59, 130, 246);
+doc.lines([[-16, 32], [8, 0], [8, -16], [8, 16], [8, 0], [-16, -32]], x + 20*scale, y + 4*scale, [scale, scale], 'F');
+doc.setFillColor(0, 180, 216);
+doc.lines([[26, -10], [-3, -5], [-26, 10], [3, 5]], x + 9*scale, y + 25*scale, [scale, scale], 'F');
+doc.save('test.pdf');
