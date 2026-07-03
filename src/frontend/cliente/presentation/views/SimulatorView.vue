@@ -199,10 +199,10 @@
 
     <!-- Recuadro Guardar -->
     <div class="save-panel mt-4">
-      <button class="btn btn-primary btn-block" @click="handleSave">
+      <button class="btn btn-primary btn-block mb-2" @click="handleSave">
         Guardar Escenario
       </button>
-      <div v-if="saveMessage" class="save-toast">
+      <div v-if="saveMessage" class="save-toast mt-2">
         {{ saveMessage }}
       </div>
     </div> <!-- Cierra save-panel -->
@@ -210,7 +210,7 @@
   </div> <!-- Cierra left-column -->
 
     <!-- Panel Derecho: Resultados -->
-    <div class="results-panel">
+    <div class="results-panel" id="pdf-content">
       <!-- Tarjetas de resumen -->
       <div class="metrics-grid">
         <div class="metric-card bg-primary">
@@ -265,7 +265,7 @@
       <div class="schedule-card">
         <div class="card-header">
           <h3>Cronograma de pagos</h3>
-          <button class="btn btn-ghost text-sm">Ver completo →</button>
+          <button class="btn-link" style="color: white !important;" @click="exportScheduleToPDF">Exportar en Pdf</button>
         </div>
         <div class="table-container">
           <table>
@@ -281,7 +281,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in schedule" :key="item.month">
+              <tr v-for="item in schedule.slice(0, 6)" :key="item.month">
                 <td>{{ item.month }}</td>
                 <td><span class="type-badge" :class="getTypeClass(item.type)">{{ item.type }}</span></td>
                 <td><span class="currency">S/</span> {{ formatMoney(item.initialBalance) }}</td>
@@ -311,6 +311,8 @@ import {
   LinearScale
 } from 'chart.js';
 import { Bar } from 'vue-chartjs';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -339,8 +341,6 @@ const {
   residualValue,
   hasPortes,
   
-  loanAmount,
-  monthlyInsuranceFixed,
   schedule,
   metrics,
   saveCurrentSimulation
@@ -352,6 +352,59 @@ const handleSave = () => {
   saveCurrentSimulation();
   saveMessage.value = '¡Simulación guardada en tu historial!';
   setTimeout(() => { saveMessage.value = ''; }, 3000);
+};
+
+const exportScheduleToPDF = () => {
+  const doc = new jsPDF();
+  
+  // -- Logo Altoque --
+  const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+  const logoX = pageWidth - 50;
+  const logoY = 12;
+  const scale = 0.25;
+
+  doc.setFillColor(59, 130, 246);
+  doc.lines([[-16, 32], [8, 0], [8, -16], [8, 16], [8, 0], [-16, -32]], logoX + 20*scale, logoY + 4*scale, [scale, scale], 'F');
+  
+  doc.setFillColor(0, 180, 216);
+  doc.lines([[26, -10], [-3, -5], [-26, 10], [3, 5]], logoX + 9*scale, logoY + 25*scale, [scale, scale], 'F');
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(59, 130, 246);
+  doc.text("Altoque", logoX + 12, logoY + 6);
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(139, 148, 158);
+  doc.text("PREMIUM FINTECH", logoX + 12, logoY + 9);
+  // -- Fin Logo --
+
+  doc.setFontSize(18);
+  doc.setTextColor(0);
+  doc.text(`Cronograma de Pagos`, 14, 22);
+  doc.text(`Vehículo: S/ ${formatMoney(vehiclePrice.value)} | Plazo: ${periods.value} meses`, 14, 30);
+  
+  const scheduleBody = schedule.value.map(row => [
+    row.month,
+    row.type,
+    `S/ ${formatMoney(row.initialBalance)}`,
+    `S/ ${formatMoney(row.interest)}`,
+    `S/ ${formatMoney(row.amortization)}`,
+    `S/ ${formatMoney(row.insurance)}`,
+    `S/ ${formatMoney(row.totalQuota)}`
+  ]);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [['N°', 'Tipo', 'Saldo Ini.', 'Interés', 'Amortización', 'Seguros', 'Cuota']],
+    body: scheduleBody,
+    theme: 'grid',
+    headStyles: { fillColor: [33, 38, 45] },
+    styles: { fontSize: 9 }
+  });
+
+  doc.save(`Cronograma_Pagos.pdf`);
 };
 
 const formatMoney = (val) => {
@@ -467,6 +520,17 @@ const chartOptions = {
   border-radius: 12px;
   padding: 16px;
   text-align: center;
+}
+
+.save-toast {
+  color: #10b981;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.mb-2 {
+  margin-bottom: 8px;
 }
 
 .panel-header h2 {
@@ -741,11 +805,6 @@ input:disabled, select:disabled {
 
 .metric-value.highlight {
   color: #3b82f6;
-}
-
-.metric-sub {
-  font-size: 0.75rem;
-  color: #8b949e;
 }
 
 .text-success { color: #10b981; }
