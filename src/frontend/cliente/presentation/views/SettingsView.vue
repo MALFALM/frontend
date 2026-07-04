@@ -31,11 +31,22 @@
         <h3 class="mt-4">Información Personal</h3>
         <div class="form-group mt-2">
           <label>NOMBRE COMPLETO</label>
-          <input type="text" v-model="userName" class="input-field" />
+          <input
+          type="text"
+          v-model="displayName"
+          class="input-field"
+          autocomplete="off"
+          placeholder="Ej. Jane Doe"
+          />
         </div>
         <div class="form-group mt-2">
           <label>CORREO ELECTRÓNICO</label>
-          <input type="email" v-model="userEmail" class="input-field" disabled />
+          <input
+          type="email"
+          :value="userEmail"
+          class="input-field"
+          disabled
+          />
           <span class="helper-text">El correo no puede ser modificado.</span>
         </div>
         
@@ -76,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useProfile } from '../../application/useProfile';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 import { updateProfileRequest } from '../../../shared/api/altoqueApi';
@@ -88,8 +99,14 @@ const currentUser = computed(() => {
   return authStore.user.value;
 });
 
-const userName = ref(
-  currentUser.value?.display_name || ''
+const displayName = ref('');
+
+watch(
+  currentUser,
+  (user) => {
+    displayName.value = user?.display_name || '';
+  },
+  { immediate: true }
 );
 
 const userEmail = computed(() => {
@@ -97,7 +114,7 @@ const userEmail = computed(() => {
 });
 
 const avatarInitials = computed(() => {
-  const name = userName.value || userEmail.value || 'Usuario';
+  const name = displayName.value || userEmail.value || 'Usuario';
 
   return name
     .split('@')[0]
@@ -118,7 +135,9 @@ const toastMessage = ref('');
 
 const showToast = (msg) => {
   toastMessage.value = msg;
-  setTimeout(() => { toastMessage.value = ''; }, 3000);
+  setTimeout(() => {
+    toastMessage.value = '';
+  }, 3000);
 };
 
 const saveProfile = async () => {
@@ -129,13 +148,17 @@ const saveProfile = async () => {
       throw new Error('No se encontró el usuario logueado.');
     }
 
-    const response = await updateProfileRequest(userId, userName.value);
+    if (!displayName.value || displayName.value.trim().length < 2) {
+      throw new Error('El nombre debe tener al menos 2 caracteres.');
+    }
+
+    const response = await updateProfileRequest(userId, displayName.value.trim());
 
     authStore.updateCurrentUser({
       display_name: response.user.display_name
     });
 
-    userName.value = response.user.display_name;
+    displayName.value = response.user.display_name;
 
     showToast('¡Perfil actualizado con éxito!');
   } catch (error) {
