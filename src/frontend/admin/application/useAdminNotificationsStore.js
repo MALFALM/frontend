@@ -7,19 +7,25 @@ const notifications = ref([]);
 const initializeNotifications = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
+
     if (saved) {
       notifications.value = JSON.parse(saved);
     }
-  } catch (e) {
-    console.error("Error loading notifications from localStorage", e);
+  } catch (error) {
+    console.error('Error loading notifications from localStorage', error);
+    notifications.value = [];
   }
 };
 
 initializeNotifications();
 
-watch(notifications, (newVal) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
-}, { deep: true });
+watch(
+  notifications,
+  (newVal) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
+  },
+  { deep: true }
+);
 
 export function useAdminNotificationsStore() {
   const addNotification = (notification) => {
@@ -32,18 +38,27 @@ export function useAdminNotificationsStore() {
   };
 
   const markAsRead = (id) => {
-    const notif = notifications.value.find(n => n.id === id);
-    if (notif) notif.read = true;
+    const notif = notifications.value.find((n) => n.id === id);
+
+    if (notif) {
+      notif.read = true;
+    }
   };
 
   const getUnreadCount = () => {
-    return notifications.value.filter(n => !n.read).length;
+    return notifications.value.filter((n) => !n.read).length;
+  };
+
+  const clearNotifications = () => {
+    notifications.value = [];
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return {
     notifications,
     addNotification,
     markAsRead,
-    getUnreadCount
+    getUnreadCount,
+    clearNotifications
   };
 }
