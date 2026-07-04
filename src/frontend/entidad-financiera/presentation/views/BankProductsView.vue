@@ -1,45 +1,36 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 
-const { getProductsByEntityId, updateProduct, addProduct } = useEntitiesStore();
+const { getProductsByEntityId, updateProduct, addProduct, loadEntities } = useEntitiesStore();
 const authStore = useAuthStore();
 
 const BANK_ID = computed(() => authStore.user.value?.bankId || 'bcp');
 const myProducts = computed(() => getProductsByEntityId(BANK_ID.value));
-
 const editingCell = ref({ productId: null, field: null });
 
-const vFocus = {
-  mounted: (el) => el.focus()
-};
+onMounted(() => loadEntities());
 
-const startEditing = (productId, field) => {
-  editingCell.value = { productId, field };
-};
+const vFocus = { mounted: (el) => el.focus() };
+const startEditing = (productId, field) => { editingCell.value = { productId, field }; };
+const stopEditing = () => { editingCell.value = { productId: null, field: null }; };
 
-const stopEditing = () => {
-  editingCell.value = { productId: null, field: null };
-};
-
-const saveField = (product) => {
-  // Lógica inteligente: si ponen 0, apagamos el flag "has..."
-  product.hasDesgravamen = product.desgravamenRate > 0;
-  product.hasVehicularInsurance = product.vehicularInsurancePercentage > 0;
-  product.hasPortes = product.portesValue > 0;
-  
-  updateProduct(BANK_ID.value, product);
+const saveField = async (product) => {
+  product.hasDesgravamen = Number(product.desgravamenRate || 0) > 0;
+  product.hasVehicularInsurance = Number(product.vehicularInsurancePercentage || 0) > 0;
+  product.hasPortes = Number(product.portesValue || 0) > 0;
+  await updateProduct(BANK_ID.value, product);
   stopEditing();
 };
 
-const handleAddProduct = () => {
+const handleAddProduct = async () => {
   const newProduct = {
-    id: `custom_${Date.now()}`,
+    id: `custom-${Date.now()}`,
     name: 'Nuevo Producto',
     rateType: 'TEA',
     rateValue: 15,
-    capitalization: 1,
+    capitalization: 12,
     hasDesgravamen: true,
     desgravamenRate: 0.05,
     hasVehicularInsurance: true,
@@ -48,7 +39,7 @@ const handleAddProduct = () => {
     portesValue: 5.0,
     promotions: []
   };
-  addProduct(BANK_ID.value, newProduct);
+  await addProduct(BANK_ID.value, newProduct);
 };
 </script>
 
@@ -56,7 +47,7 @@ const handleAddProduct = () => {
   <div class="products-view">
     <div class="header-actions">
       <h2>Mis Productos Financieros</h2>
-      <p class="subtitle">Haz clic en cualquier valor de la tabla para editarlo rápidamente.</p>
+      <p class="subtitle">Haz clic en cualquier valor de la tabla para editarlo rÃ¡pidamente.</p>
     </div>
 
     <div class="table-container mt-4">
@@ -85,7 +76,7 @@ const handleAddProduct = () => {
                 class="inline-input"
                 v-focus
               />
-              <span v-else>{{ product.name }} <i class="edit-icon">✎</i></span>
+              <span v-else>{{ product.name }} <i class="edit-icon">âœŽ</i></span>
             </td>
 
             <!-- Tasa Valor -->
@@ -99,7 +90,7 @@ const handleAddProduct = () => {
                 class="inline-input"
                 v-focus
               />
-              <span v-else class="badge">{{ product.rateValue }}% <i class="edit-icon">✎</i></span>
+              <span v-else class="badge">{{ product.rateValue }}% <i class="edit-icon">âœŽ</i></span>
             </td>
 
             <!-- Tipo Tasa -->
@@ -115,7 +106,7 @@ const handleAddProduct = () => {
                 <option value="TEA">TEA</option>
                 <option value="TNA">TNA</option>
               </select>
-              <span v-else>{{ product.rateType }} <i class="edit-icon">✎</i></span>
+              <span v-else>{{ product.rateType }} <i class="edit-icon">âœŽ</i></span>
             </td>
 
             <!-- Desgravamen -->
@@ -129,7 +120,7 @@ const handleAddProduct = () => {
                 class="inline-input"
                 v-focus
               />
-              <span v-else>{{ product.hasDesgravamen ? (product.desgravamenRate * 100).toFixed(2) + '%' : '0%' }} <i class="edit-icon">✎</i></span>
+              <span v-else>{{ product.hasDesgravamen ? (product.desgravamenRate * 100).toFixed(2) + '%' : '0%' }} <i class="edit-icon">âœŽ</i></span>
             </td>
 
             <!-- Seguro Vehicular -->
@@ -143,7 +134,7 @@ const handleAddProduct = () => {
                 class="inline-input"
                 v-focus
               />
-              <span v-else>{{ product.hasVehicularInsurance ? product.vehicularInsurancePercentage.toFixed(2) + '%' : '0%' }} <i class="edit-icon">✎</i></span>
+              <span v-else>{{ product.hasVehicularInsurance ? product.vehicularInsurancePercentage.toFixed(2) + '%' : '0%' }} <i class="edit-icon">âœŽ</i></span>
             </td>
 
             <!-- Portes -->
@@ -157,7 +148,7 @@ const handleAddProduct = () => {
                 class="inline-input"
                 v-focus
               />
-              <span v-else>{{ product.hasPortes ? 'S/ ' + product.portesValue.toFixed(2) : 'S/ 0.00' }} <i class="edit-icon">✎</i></span>
+              <span v-else>{{ product.hasPortes ? 'S/ ' + product.portesValue.toFixed(2) : 'S/ 0.00' }} <i class="edit-icon">âœŽ</i></span>
             </td>
 
           </tr>

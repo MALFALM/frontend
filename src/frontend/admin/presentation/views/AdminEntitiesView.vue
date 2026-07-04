@@ -1,25 +1,23 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useEntitiesStore } from '../../../entidad-financiera/application/useEntitiesStore';
 import { useAdminNotificationsStore } from '../../application/useAdminNotificationsStore';
 
-const { entities, addEntity, toggleSuspendEntity } = useEntitiesStore();
+const { entities, addEntity, toggleSuspendEntity, loadEntities } = useEntitiesStore();
 const { notifications } = useAdminNotificationsStore();
+
+onMounted(() => loadEntities({ force: true }));
 
 const suspendingBankIds = computed(() => {
   return notifications.value
-    .filter(n => n.type === 'suspension_request')
-    .map(n => n.bankId);
+    .filter((notification) => notification.type === 'suspension_request')
+    .map((notification) => notification.bankId);
 });
 
 const showModal = ref(false);
 const showCredentialsModal = ref(false);
 const generatedCredentials = ref(null);
-const newEntity = ref({
-  name: '',
-  id: '',
-  themeColor: '#000000'
-});
+const newEntity = ref({ name: '', id: '', themeColor: '#000000' });
 
 const generateIdFromName = () => {
   if (newEntity.value.name && !newEntity.value.id) {
@@ -27,25 +25,27 @@ const generateIdFromName = () => {
   }
 };
 
-const handleSave = () => {
-  if (newEntity.value.name && newEntity.value.id) {
-    addEntity({
-      id: newEntity.value.id,
-      name: newEntity.value.name,
-      themeColor: newEntity.value.themeColor,
-      products: []
-    });
-    
-    // Generar credenciales mock
-    const email = `admin@${newEntity.value.id}.com`;
-    const password = Math.random().toString(36).slice(-8);
-    generatedCredentials.value = { email, password, name: newEntity.value.name };
-    
-    showModal.value = false;
-    showCredentialsModal.value = true;
-    
-    newEntity.value = { name: '', id: '', themeColor: '#000000' };
-  }
+const generatePassword = () => {
+  return `Altoque${Math.random().toString(36).slice(2, 8)}1`;
+};
+
+const handleSave = async () => {
+  if (!newEntity.value.name || !newEntity.value.id) return;
+
+  const email = `admin@${newEntity.value.id}.com`;
+  const password = generatePassword();
+  const entityPayload = {
+    id: newEntity.value.id,
+    name: newEntity.value.name,
+    themeColor: newEntity.value.themeColor,
+    products: []
+  };
+
+  await addEntity(entityPayload, { username: email, password });
+  generatedCredentials.value = { email, password, name: newEntity.value.name };
+  showModal.value = false;
+  showCredentialsModal.value = true;
+  newEntity.value = { name: '', id: '', themeColor: '#000000' };
 };
 
 const closeCredentialsModal = () => {
@@ -82,7 +82,7 @@ const closeCredentialsModal = () => {
               <div class="bank-name-col">
                 <div class="color-dot" :style="{ backgroundColor: entity.themeColor || '#ccc' }"></div>
                 {{ entity.name }}
-                <span v-if="suspendingBankIds.includes(entity.id)" title="Solicitud de suspensión pendiente">⚠️</span>
+                <span v-if="suspendingBankIds.includes(entity.id)" title="Solicitud de suspensiÃ³n pendiente">âš ï¸</span>
               </div>
             </td>
             <td class="text-gray">{{ entity.id }}</td>
@@ -92,7 +92,7 @@ const closeCredentialsModal = () => {
             <td>{{ entity.products ? entity.products.length : 0 }} activos</td>
             <td>
               <span class="status-badge" :class="entity.isSuspended ? 'danger' : (suspendingBankIds.includes(entity.id) ? 'warning' : 'active')">
-                {{ entity.isSuspended ? 'Suspendido' : (suspendingBankIds.includes(entity.id) ? 'En revisión' : 'Activo') }}
+                {{ entity.isSuspended ? 'Suspendido' : (suspendingBankIds.includes(entity.id) ? 'En revisiÃ³n' : 'Activo') }}
               </span>
             </td>
             <td>
@@ -113,7 +113,7 @@ const closeCredentialsModal = () => {
       <div class="modal-content">
         <div class="modal-header">
           <h3>Registrar Nueva Entidad</h3>
-          <button class="close-btn" @click="showModal = false">✕</button>
+          <button class="close-btn" @click="showModal = false">âœ•</button>
         </div>
         
         <div class="modal-body">
@@ -125,7 +125,7 @@ const closeCredentialsModal = () => {
           <div class="form-group">
             <label>ID Interno (URL amigable)</label>
             <input type="text" v-model="newEntity.id" placeholder="ej. scotiabank" class="input-field" />
-            <p class="helper-text">Este ID se usa internamente y debe ser único (sin espacios).</p>
+            <p class="helper-text">Este ID se usa internamente y debe ser Ãºnico (sin espacios).</p>
           </div>
           
           <div class="form-group">
@@ -144,26 +144,26 @@ const closeCredentialsModal = () => {
       </div>
     </div>
     
-    <!-- Modal Credenciales Generadas (Mock) -->
+    <!-- Modal Credenciales Generadas -->
     <div v-if="showCredentialsModal" class="modal-overlay" @click.self="closeCredentialsModal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>¡Banco Creado Exitosamente!</h3>
-          <button class="close-btn" @click="closeCredentialsModal">✕</button>
+          <h3>Â¡Banco Creado Exitosamente!</h3>
+          <button class="close-btn" @click="closeCredentialsModal">âœ•</button>
         </div>
         
         <div class="modal-body text-center">
-          <div style="font-size: 3rem; margin-bottom: 16px;">✉️</div>
+          <div style="font-size: 3rem; margin-bottom: 16px;">âœ‰ï¸</div>
           <p style="color: #64748b; margin-bottom: 16px;">
             El banco <strong>{{ generatedCredentials.name }}</strong> ha sido registrado. 
-            Como esto es un entorno de simulación, estas son las credenciales generadas para ingresar:
+            Estas credenciales fueron creadas en el backend para el usuario banco:
           </p>
           <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1; text-align: left;">
             <p><strong>Correo corporativo:</strong> {{ generatedCredentials.email }}</p>
-            <p><strong>Contraseña:</strong> {{ generatedCredentials.password }}</p>
+            <p><strong>ContraseÃ±a:</strong> {{ generatedCredentials.password }}</p>
           </div>
           <p style="color: #ef4444; font-size: 0.85rem; margin-top: 16px;">
-            En producción, estas credenciales serían enviadas por correo electrónico al representante del banco, ya que el sistema no admite el registro directo de entidades.
+            En producciÃ³n, estas credenciales serÃ­an enviadas por correo electrÃ³nico al representante del banco, ya que el sistema no admite el registro directo de entidades.
           </p>
         </div>
         

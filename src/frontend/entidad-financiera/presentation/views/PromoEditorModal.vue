@@ -2,20 +2,15 @@
 import { ref, computed } from 'vue';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
 
-const props = defineProps({
-  promo: Object, // null si es nueva
-  bankId: String
-});
-
+const props = defineProps({ promo: Object, bankId: String });
 const emit = defineEmits(['close']);
 
 const { getProductsByEntityId, updateProduct } = useEntitiesStore();
 const myProducts = computed(() => getProductsByEntityId(props.bankId));
-
 const isNew = !props.promo;
 
 const formData = ref(props.promo ? { ...props.promo } : {
-  id: Date.now().toString(),
+  id: `promo-${Date.now()}`,
   name: '',
   productId: myProducts.value.length > 0 ? myProducts.value[0].id : '',
   type: 'rate_discount',
@@ -23,41 +18,35 @@ const formData = ref(props.promo ? { ...props.promo } : {
   active: true
 });
 
-const save = () => {
-  // Buscamos el producto seleccionado
-  const product = myProducts.value.find(p => p.id === formData.value.productId);
+const save = async () => {
+  const product = myProducts.value.find((item) => item.id === formData.value.productId);
   if (!product) return;
-  
   if (!product.promotions) product.promotions = [];
-  
+
   if (isNew) {
-    product.promotions.push(formData.value);
+    product.promotions.push({ ...formData.value });
+  } else if (props.promo.productId === formData.value.productId) {
+    const idx = product.promotions.findIndex((item) => item.id === formData.value.id);
+    if (idx !== -1) product.promotions[idx] = { ...formData.value };
   } else {
-    // Si cambiaron el producto asociado
-    if (props.promo.productId === formData.value.productId) {
-      const idx = product.promotions.findIndex(p => p.id === formData.value.id);
-      if (idx !== -1) product.promotions[idx] = formData.value;
-    } else {
-      // Eliminar del producto viejo
-      const oldProduct = myProducts.value.find(p => p.id === props.promo.productId);
-      if (oldProduct && oldProduct.promotions) {
-        oldProduct.promotions = oldProduct.promotions.filter(p => p.id !== formData.value.id);
-        updateProduct(props.bankId, oldProduct);
-      }
-      product.promotions.push(formData.value);
+    const oldProduct = myProducts.value.find((item) => item.id === props.promo.productId);
+    if (oldProduct && oldProduct.promotions) {
+      oldProduct.promotions = oldProduct.promotions.filter((item) => item.id !== formData.value.id);
+      await updateProduct(props.bankId, oldProduct);
     }
+    product.promotions.push({ ...formData.value });
   }
-  
-  updateProduct(props.bankId, product);
+
+  await updateProduct(props.bankId, product);
   emit('close');
 };
 
-const remove = () => {
+const remove = async () => {
   if (isNew) return;
-  const product = myProducts.value.find(p => p.id === props.promo.productId);
+  const product = myProducts.value.find((item) => item.id === props.promo.productId);
   if (product && product.promotions) {
-    product.promotions = product.promotions.filter(p => p.id !== formData.value.id);
-    updateProduct(props.bankId, product);
+    product.promotions = product.promotions.filter((item) => item.id !== formData.value.id);
+    await updateProduct(props.bankId, product);
   }
   emit('close');
 };
@@ -67,14 +56,14 @@ const remove = () => {
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>{{ isNew ? 'Crear Promoción' : 'Editar Promoción' }}</h2>
-        <button class="close-btn" @click="$emit('close')">×</button>
+        <h2>{{ isNew ? 'Crear PromociÃ³n' : 'Editar PromociÃ³n' }}</h2>
+        <button class="close-btn" @click="$emit('close')">Ã—</button>
       </div>
 
       <div class="modal-body">
         <div class="form-group">
-          <label>Nombre de la Promoción</label>
-          <input type="text" v-model="formData.name" class="input-field" placeholder="Ej. Campaña Navideña" />
+          <label>Nombre de la PromociÃ³n</label>
+          <input type="text" v-model="formData.name" class="input-field" placeholder="Ej. CampaÃ±a NavideÃ±a" />
         </div>
 
         <div class="form-group mt-3">
@@ -96,7 +85,7 @@ const remove = () => {
               <option value="grace_months_partial">Meses de Gracia Parcial (Solo intereses)</option>
               <option value="free_desgravamen">Desgravamen Gratis (0%)</option>
               <option value="free_vehicular_insurance">Seguro Vehicular Gratis</option>
-              <option value="free_portes">Exoneración de Portes (S/ 0)</option>
+              <option value="free_portes">ExoneraciÃ³n de Portes (S/ 0)</option>
               <option value="zero_down_payment">Cuota Inicial Flex (Desde 0%)</option>
             </select>
           </div>
@@ -109,17 +98,17 @@ const remove = () => {
         <div class="form-group checkbox-group mt-3">
           <label>
             <input type="checkbox" v-model="formData.active" />
-            Promoción Activa
+            PromociÃ³n Activa
           </label>
-          <p class="help-text">Si está activa, se mostrará públicamente a los clientes.</p>
+          <p class="help-text">Si estÃ¡ activa, se mostrarÃ¡ pÃºblicamente a los clientes.</p>
         </div>
       </div>
 
       <div class="modal-footer" :class="{ 'between': !isNew }">
-        <button v-if="!isNew" class="btn btn-danger" @click="remove">Eliminar Promoción</button>
+        <button v-if="!isNew" class="btn btn-danger" @click="remove">Eliminar PromociÃ³n</button>
         <div class="action-buttons">
           <button class="btn btn-outline" @click="$emit('close')">Cancelar</button>
-          <button class="btn btn-primary" @click="save">{{ isNew ? 'Crear Promoción' : 'Guardar Cambios' }}</button>
+          <button class="btn btn-primary" @click="save">{{ isNew ? 'Crear PromociÃ³n' : 'Guardar Cambios' }}</button>
         </div>
       </div>
     </div>
