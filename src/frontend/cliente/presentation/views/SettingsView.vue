@@ -32,6 +32,8 @@
         <div class="form-group mt-2">
           <label>NOMBRE COMPLETO</label>
           <input
+          id="profile-display-name"
+          name="profile_display_name"
           type="text"
           v-model="displayName"
           class="input-field"
@@ -87,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 import { updateProfileRequest } from '../../../shared/api/altoqueApi';
@@ -99,14 +101,8 @@ const currentUser = computed(() => {
   return authStore.user.value;
 });
 
-const displayName = ref('');
-
-watch(
-  currentUser,
-  (user) => {
-    displayName.value = user?.display_name || '';
-  },
-  { immediate: true }
+const displayName = ref(
+  authStore.user.value?.display_name || ''
 );
 
 const userEmail = computed(() => {
@@ -114,7 +110,7 @@ const userEmail = computed(() => {
 });
 
 const avatarInitials = computed(() => {
-  const name = displayName.value || userEmail.value || 'Usuario';
+  const name = displayName.value || currentUser.value?.display_name || userEmail.value || 'Usuario';
 
   return name
     .split('@')[0]
