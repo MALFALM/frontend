@@ -48,16 +48,17 @@ export function useAuthStore() {
     };
 
     const loginWithBackend = ({ token, user }) => {
-        const newSession = {
-            role: user.rol,
-            id_user: user.id_user,
-            username: user.username,
-            token
-        };
-        
-        session.value = newSession;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+    const newSession = {
+        role: user.rol,
+        id_user: user.id_user,
+        username: user.username,
+        display_name: user.display_name,
+        token
     };
+    
+    session.value = newSession;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+};
 
     const updateCurrentUser = (updatedData) => {
         if (!session.value) return;
@@ -83,14 +84,3 @@ export function useAuthStore() {
     };
 }
 
-const loginWithBackend = ({ token, user }) => {
-    const newSession = {
-        role: user.rol,
-        id_user: user.id_user,
-        username: user.username,
-        token
-    };
-
-    session.value = newSession;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
-};

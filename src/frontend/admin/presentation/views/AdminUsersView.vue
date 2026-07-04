@@ -110,7 +110,7 @@ const mappedBackendUsers = computed(() => {
     .map(user => ({
       id: `db_${user.id_user}`,
       id_user: user.id_user,
-      name: user.name || user.fullName || getNameFromEmail(user.username),
+      name: user.display_name || user.name || user.fullName || getNameFromEmail(user.username),
       email: user.username,
       registeredAt: formatDate(user.created_at || user.createdAt),
       status: user.estado_cuenta === 0 || user.estado_cuenta === false ? 'Inactivo' : 'Activo',
