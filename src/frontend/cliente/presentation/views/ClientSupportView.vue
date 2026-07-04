@@ -139,7 +139,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../../login/application/useAuthStore';
 import {
   createSupportTicketRequest,
   getSupportTicketsByUserRequest,

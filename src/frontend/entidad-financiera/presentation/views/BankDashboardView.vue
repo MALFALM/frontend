@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
-import { useAuthStore } from '../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../../login/application/useAuthStore';
 
 const { getProductsByEntityId } = useEntitiesStore();
 const authStore = useAuthStore();

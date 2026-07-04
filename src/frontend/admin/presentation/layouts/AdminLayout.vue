@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../../login/application/useAuthStore';
 import { useAdminNotificationsStore } from '../../application/useAdminNotificationsStore';
 
 const router = useRouter();
