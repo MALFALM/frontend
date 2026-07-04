@@ -198,6 +198,12 @@ const loadMyTickets = async () => {
 
 const startChat = async () => {
   try {
+    console.log('CLICK START CHAT');
+    console.log('Usuario actual:', currentUser.value);
+    console.log('userId:', userId.value);
+    console.log('Asunto:', newSubject.value);
+    console.log('Mensaje:', newMessage.value);
+
     if (!userId.value) {
       throw new Error('Debes iniciar sesión para enviar una consulta.');
     }
@@ -208,13 +214,19 @@ const startChat = async () => {
 
     isSending.value = true;
 
-    const response = await createSupportTicketRequest({
+    const payload = {
       id_user: userId.value,
       subject: newSubject.value.trim(),
       message: newMessage.value.trim(),
       sender_role: 'client',
       sender_name: userName.value
-    });
+    };
+
+    console.log('Payload soporte:', payload);
+
+    const response = await createSupportTicketRequest(payload);
+
+    console.log('Respuesta crear ticket:', response);
 
     newSubject.value = '';
     newMessage.value = '';
