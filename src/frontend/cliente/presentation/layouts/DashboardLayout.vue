@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
-import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../login/application/useAuthStore';
 import { useRouter } from 'vue-router';
 
 const { profileImage } = useProfile();

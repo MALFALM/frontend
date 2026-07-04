@@ -321,7 +321,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'vue-chartjs';
 import { saveCreditRequest } from '../../../shared/api/altoqueApi';
-import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../login/application/useAuthStore';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 

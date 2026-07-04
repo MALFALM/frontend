@@ -1,5 +1,5 @@
 <script setup>
-import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../login/application/useAuthStore';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
 import { useAdminNotificationsStore } from '../../../admin/application/useAdminNotificationsStore';
 import { suspendUserRequest } from '../../../shared/api/altoqueApi';

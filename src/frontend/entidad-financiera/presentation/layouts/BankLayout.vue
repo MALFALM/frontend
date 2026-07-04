@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../login/application/useAuthStore';
 import { useEntitiesStore } from '../../application/useEntitiesStore';
 
 const router = useRouter();

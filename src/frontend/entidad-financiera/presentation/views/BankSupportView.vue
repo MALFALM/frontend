@@ -87,7 +87,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
-import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../login/application/useAuthStore';
 import { useSupportStore } from '../../../../config/useSupportStore';
 
 const authStore = useAuthStore();

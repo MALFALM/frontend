@@ -91,7 +91,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
-import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAuthStore } from '../../../login/application/useAuthStore';
 import { updateProfileRequest,changePasswordRequest  } from '../../../shared/api/altoqueApi';
 
 const { profileImage } = useProfile();
