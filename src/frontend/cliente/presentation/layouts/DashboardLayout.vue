@@ -4,14 +4,9 @@ import { useProfile } from '../../application/useProfile';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 import { useRouter } from 'vue-router';
 
-const { profileImage, userName, userRole } = useProfile();
+const { profileImage } = useProfile();
 const authStore = useAuthStore();
 const router = useRouter();
-
-const handleLogout = () => {
-  authStore.logout();
-  router.push('/login');
-};
 
 const currentUser = computed(() => {
   return authStore.user.value;
@@ -24,7 +19,7 @@ const userName = computed(() => {
 const userRole = computed(() => {
   const role = currentUser.value?.role;
 
-  if (role === 'client') return 'Cliente Premium';
+  if (role === 'client') return 'Cliente';
   if (role === 'bank') return 'Entidad Financiera';
   if (role === 'admin') return 'Administrador';
 
@@ -39,6 +34,12 @@ const userInitials = computed(() => {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+});
+
+const handleLogout = () => {
+  authStore.logout();
+  router.push('/login');
+};
 </script>
 
 <template>
