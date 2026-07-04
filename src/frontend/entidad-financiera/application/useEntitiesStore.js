@@ -1,5 +1,4 @@
 import { ref, watch } from 'vue';
-import { financialEntities as initialMockEntities } from '../../cliente/infrastructure/mocks/entities';
 
 const STORAGE_KEY = 'altoque_financial_entities';
 
@@ -9,15 +8,16 @@ const entities = ref([]);
 const initializeEntities = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
+
     if (saved) {
       entities.value = JSON.parse(saved);
     } else {
-      entities.value = JSON.parse(JSON.stringify(initialMockEntities));
+      entities.value = [];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entities.value));
     }
   } catch (e) {
     console.error("Error loading entities from localStorage", e);
-    entities.value = JSON.parse(JSON.stringify(initialMockEntities));
+    entities.value = [];
   }
 };
 

@@ -5,43 +5,6 @@ import AdminUserDetailsModal from './AdminUserDetailsModal.vue';
 
 // Mock de usuarios registrados con historial extendido
 const mockUsers = ref([
-  { 
-    id: 'usr_001', name: 'Alex Mercer', email: 'alex@ejemplo.com', registeredAt: '2026-06-25', status: 'Activo', simulations: 5, avgTicket: 'S/ 65,000',
-    bankPreferences: [
-      { bankName: 'BCP', count: 3, color: '#ff5a00' },
-      { bankName: 'Interbank', count: 2, color: '#00b14f' }
-    ],
-    recentSimulations: [
-      { vehicle: 'Toyota RAV4 2024', bankName: 'BCP', color: '#ff5a00', downPayment: '20%', term: 36 },
-      { vehicle: 'Kia Sportage', bankName: 'Interbank', color: '#00b14f', downPayment: '25%', term: 48 }
-    ]
-  },
-  { 
-    id: 'usr_002', name: 'María Gómez', email: 'maria.g@gmail.com', registeredAt: '2026-06-26', status: 'Activo', simulations: 2, avgTicket: 'S/ 42,000',
-    bankPreferences: [
-      { bankName: 'BBVA', count: 2, color: '#072146' }
-    ],
-    recentSimulations: [
-      { vehicle: 'Nissan Versa', bankName: 'BBVA', color: '#072146', downPayment: '10%', term: 60 }
-    ]
-  },
-  { 
-    id: 'usr_003', name: 'Carlos Ruíz', email: 'cruiz@hotmail.com', registeredAt: '2026-06-27', status: 'Inactivo', simulations: 0, avgTicket: 'N/A',
-    bankPreferences: [],
-    recentSimulations: []
-  },
-  { 
-    id: 'usr_004', name: 'Laura Vargas', email: 'laura.vargas@empresa.pe', registeredAt: '2026-06-28', status: 'Activo', simulations: 12, avgTicket: 'S/ 115,000',
-    bankPreferences: [
-      { bankName: 'BCP', count: 8, color: '#ff5a00' },
-      { bankName: 'BBVA', count: 4, color: '#072146' }
-    ],
-    recentSimulations: [
-      { vehicle: 'Jeep Grand Cherokee', bankName: 'BCP', color: '#ff5a00', downPayment: '30%', term: 24 },
-      { vehicle: 'Ford Explorer', bankName: 'BBVA', color: '#072146', downPayment: '15%', term: 36 },
-      { vehicle: 'Honda CR-V', bankName: 'BCP', color: '#ff5a00', downPayment: '20%', term: 48 }
-    ]
-  }
 ]);
 
 const backendUsers = ref([]);
@@ -122,16 +85,7 @@ const mappedBackendUsers = computed(() => {
 });
 
 const usersToShow = computed(() => {
-  const mockEmails = mockUsers.value.map(user => user.email);
-
-  const realUsersWithoutDuplicates = mappedBackendUsers.value.filter(user => {
-    return !mockEmails.includes(user.email);
-  });
-
-  return [
-    ...mockUsers.value,
-    ...realUsersWithoutDuplicates
-  ];
+  return mappedBackendUsers.value;
 });
 
 const getStatusClass = (status) => {

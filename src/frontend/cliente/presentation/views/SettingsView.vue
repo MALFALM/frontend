@@ -92,7 +92,7 @@
 import { ref, computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
-import { updateProfileRequest } from '../../../shared/api/altoqueApi';
+import { updateProfileRequest,changePasswordRequest  } from '../../../shared/api/altoqueApi';
 
 const { profileImage } = useProfile();
 const authStore = useAuthStore();
@@ -188,10 +188,28 @@ const isPasswordValid = computed(() => {
          passwords.value.new === passwords.value.confirm;
 });
 
-const updatePassword = () => {
-  if (isPasswordValid.value) {
+const updatePassword = async () => {
+  try {
+    const userId = currentUser.value?.id_user;
+
+    if (!userId) {
+      throw new Error('No se encontró el usuario logueado.');
+    }
+
+    if (!isPasswordValid.value) {
+      throw new Error('Verifica que las contraseñas coincidan y tengan mínimo 8 caracteres.');
+    }
+
+    await changePasswordRequest({
+      id_user: userId,
+      currentPassword: passwords.value.current,
+      newPassword: passwords.value.new
+    });
+
     showToast('¡Contraseña actualizada correctamente!');
     passwords.value = { current: '', new: '', confirm: '' };
+  } catch (error) {
+    showToast(error.message || 'No se pudo actualizar la contraseña.');
   }
 };
 </script>

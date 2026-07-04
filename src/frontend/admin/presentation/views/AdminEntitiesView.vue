@@ -7,6 +7,14 @@ import { createBankRequest } from '../../../shared/api/altoqueApi';
 const { entities, addEntity } = useEntitiesStore();
 const { notifications } = useAdminNotificationsStore();
 
+const mockBankIds = ['bcp', 'interbank', 'bbva'];
+
+const entitiesToShow = computed(() => {
+  return entities.value.filter(entity => {
+    return !mockBankIds.includes(entity.id);
+  });
+});
+
 const suspendingBankIds = computed(() => {
   return notifications.value
     .filter(n => n.type === 'suspension_request')
@@ -108,7 +116,7 @@ const closeCredentialsModal = () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entity in entities" :key="entity.id" :class="{ 'suspension-row': suspendingBankIds.includes(entity.id) }">
+          <tr v-for="entity in entitiesToShow" :key="entity.id" :class="{ 'suspension-row': suspendingBankIds.includes(entity.id) }">
             <td class="font-bold">
               <div class="bank-name-col">
                 <div class="color-dot" :style="{ backgroundColor: entity.themeColor || '#ccc' }"></div>
@@ -130,9 +138,9 @@ const closeCredentialsModal = () => {
               <button class="btn btn-outline-small">Suspender</button>
             </td>
           </tr>
-          <tr v-if="entities.length === 0">
-            <td colspan="6" class="text-center py-4 text-gray">No hay bancos registrados.</td>
-          </tr>
+          <tr v-if="entitiesToShow.length === 0">
+  <td colspan="6" class="text-center py-4 text-gray">No hay bancos registrados.</td>
+</tr>
         </tbody>
       </table>
     </div>

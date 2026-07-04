@@ -147,3 +147,45 @@ export const suspendUserRequest = async (userId, reason) => {
 
   return data;
 };
+
+export const updateProfileRequest = async (userId, displayName) => {
+  const response = await fetch(`${API_URL}/auth/users/${userId}/profile`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      display_name: displayName
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo actualizar el perfil');
+  }
+
+  return data;
+};
+
+export const changePasswordRequest = async ({ id_user, currentPassword, newPassword }) => {
+  const response = await fetch(`${API_URL}/auth/change-password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      id_user,
+      currentPassword,
+      newPassword
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo actualizar la contraseña');
+  }
+
+  return data;
+};
