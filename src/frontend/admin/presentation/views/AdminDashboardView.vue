@@ -83,6 +83,12 @@ const doughnutOptions = {
         <span class="metric-value" style="color: #072146;">BBVA</span>
         <span class="metric-sub">45% de las simulaciones</span>
       </div>
+
+      <router-link to="/admin/soporte" class="metric-card support-card-link">
+  <span class="metric-label">SOPORTE</span>
+  <span class="metric-value">🎧</span>
+  <span class="metric-sub text-blue">Ir a Soporte y Atención</span>
+</router-link>
     </div>
 
     <!-- Gráfico y Tips -->
@@ -129,6 +135,18 @@ const doughnutOptions = {
 </template>
 
 <style scoped>
+
+.support-card-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.support-card-link:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(59, 130, 246, 0.12);
+}
+
 .header-actions h2 {
   margin: 0;
   color: #0f172a;

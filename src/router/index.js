@@ -23,51 +23,41 @@ const routes = [
     component: () => import('../frontend/cliente/presentation/views/SimpleSimulatorView.vue')
   },
   {
-    path: '/inicio',
-    component: () => import('../frontend/cliente/presentation/layouts/DashboardLayout.vue'),
-    children: [
-      {
-        path: '',
-        name: 'Dashboard',
-        component: () => import('../frontend/cliente/presentation/views/SimulatorView.vue')
-      },
-      {
-        path: 'nueva-simulacion',
-        name: 'NuevaSimulacion',
-        component: () => import('../frontend/cliente/presentation/views/NewSimulationView.vue')
-      },
-      {
-        path: 'soporte',
-        name: 'ClientSupport',
-        component: () => import('../frontend/cliente/presentation/views/ClientSupportView.vue')
-      },
-      {
-        path: 'soporte',
-        name: 'BankSupport',
-        component: () => import('../frontend/entidad-financiera/presentation/views/BankSupportView.vue')
-      },
-      {
-        path: 'soporte',
-        name: 'AdminSupport',
-        component: () => import('../frontend/admin/presentation/views/AdminSupportView.vue')
-      },
-      {
-        path: 'mis-simulaciones',
-        name: 'MisSimulaciones',
-        component: () => import('../frontend/cliente/presentation/views/SavedSimulationsView.vue')
-      },
-      {
-        path: 'comparar',
-        name: 'CompararEscenarios',
-        component: () => import('../frontend/cliente/presentation/views/CompareScenariosView.vue')
-      },
-      {
-        path: 'ajustes',
-        name: 'AjustesPerfil',
-        component: () => import('../frontend/cliente/presentation/views/SettingsView.vue')
-      }
-    ]
-  },
+  path: '/inicio',
+  component: () => import('../frontend/cliente/presentation/layouts/DashboardLayout.vue'),
+  children: [
+    {
+      path: '',
+      name: 'Dashboard',
+      component: () => import('../frontend/cliente/presentation/views/SimulatorView.vue')
+    },
+    {
+      path: 'nueva-simulacion',
+      name: 'NuevaSimulacion',
+      component: () => import('../frontend/cliente/presentation/views/NewSimulationView.vue')
+    },
+    {
+      path: 'soporte',
+      name: 'ClientSupport',
+      component: () => import('../frontend/cliente/presentation/views/ClientSupportView.vue')
+    },
+    {
+      path: 'mis-simulaciones',
+      name: 'MisSimulaciones',
+      component: () => import('../frontend/cliente/presentation/views/SavedSimulationsView.vue')
+    },
+    {
+      path: 'comparar',
+      name: 'CompararEscenarios',
+      component: () => import('../frontend/cliente/presentation/views/CompareScenariosView.vue')
+    },
+    {
+      path: 'ajustes',
+      name: 'AjustesPerfil',
+      component: () => import('../frontend/cliente/presentation/views/SettingsView.vue')
+    }
+  ]
+},
   {
     path: '/banco',
     component: () => import('../frontend/entidad-financiera/presentation/layouts/BankLayout.vue'),
@@ -99,27 +89,32 @@ const routes = [
       }
     ]
   },
-  {
-    path: '/admin',
-    component: () => import('../frontend/admin/presentation/layouts/AdminLayout.vue'),
-    children: [
-      {
-        path: '',
-        name: 'AdminDashboard',
-        component: () => import('../frontend/admin/presentation/views/AdminDashboardView.vue')
-      },
-      {
-        path: 'entidades',
-        name: 'AdminEntities',
-        component: () => import('../frontend/admin/presentation/views/AdminEntitiesView.vue')
-      },
-      {
-        path: 'usuarios',
-        name: 'AdminUsers',
-        component: () => import('../frontend/admin/presentation/views/AdminUsersView.vue')
-      }
-    ]
-  }
+ {
+  path: '/admin',
+  component: () => import('../frontend/admin/presentation/layouts/AdminLayout.vue'),
+  children: [
+    {
+      path: '',
+      name: 'AdminDashboard',
+      component: () => import('../frontend/admin/presentation/views/AdminDashboardView.vue')
+    },
+    {
+      path: 'entidades',
+      name: 'AdminEntities',
+      component: () => import('../frontend/admin/presentation/views/AdminEntitiesView.vue')
+    },
+    {
+      path: 'usuarios',
+      name: 'AdminUsers',
+      component: () => import('../frontend/admin/presentation/views/AdminUsersView.vue')
+    },
+    {
+      path: 'soporte',
+      name: 'AdminSupport',
+      component: () => import('../frontend/admin/presentation/views/AdminSupportView.vue')
+    }
+  ]
+}
 ];
 
 const router = createRouter({

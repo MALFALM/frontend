@@ -42,6 +42,10 @@ const logout = () => {
           <span class="icon">👥</span>
           <span>Usuarios Base</span>
         </router-link>
+        <router-link to="/admin/soporte" class="nav-item" active-class="active">
+    <span class="icon">🎧</span>
+    <span>Soporte</span>
+  </router-link>
       </nav>
 
       <div class="sidebar-footer" @click="logout" style="cursor: pointer;">
