@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
 import { useRouter } from 'vue-router';
@@ -11,6 +12,33 @@ const handleLogout = () => {
   authStore.logout();
   router.push('/login');
 };
+
+const currentUser = computed(() => {
+  return authStore.user.value;
+});
+
+const userName = computed(() => {
+  return currentUser.value?.display_name || currentUser.value?.username || 'Usuario';
+});
+
+const userRole = computed(() => {
+  const role = currentUser.value?.role;
+
+  if (role === 'client') return 'Cliente Premium';
+  if (role === 'bank') return 'Entidad Financiera';
+  if (role === 'admin') return 'Administrador';
+
+  return 'Usuario';
+});
+
+const userInitials = computed(() => {
+  return userName.value
+    .split('@')[0]
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 </script>
 
 <template>
@@ -61,8 +89,8 @@ const handleLogout = () => {
         <router-link to="/inicio/ajustes" class="user-profile" style="text-decoration: none;">
           <img v-if="profileImage" :src="profileImage" alt="User" class="avatar" style="object-fit: cover;" />
           <div v-else class="avatar" style="display: flex; align-items: center; justify-content: center; background-color: #3b82f6; color: white; font-weight: bold; font-size: 0.9rem;">
-            AM
-          </div>
+            {{ userInitials }}
+            </div>
           <div class="user-info">
             <span class="user-name">{{ userName }}</span>
             <span class="user-role">{{ userRole }}</span>
