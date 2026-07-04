@@ -6,77 +6,131 @@
     </div>
 
     <div class="chat-container card mt-4">
-      <div v-if="!activeChatId" class="new-chat-panel">
+      <div v-if="!activeTicketId" class="new-chat-panel">
         <h3>¿En qué te podemos ayudar hoy?</h3>
+
         <div class="form-group mt-4">
           <label>Asunto / Tema</label>
-          <input type="text" v-model="newSubject" placeholder="Ej. Duda sobre tasa de interés" class="input-field" />
+          <input
+            type="text"
+            v-model="newSubject"
+            placeholder="Ej. Duda sobre tasa de interés"
+            class="input-field"
+          />
         </div>
+
         <div class="form-group mt-2">
           <label>Tu mensaje</label>
-          <textarea v-model="newMessage" placeholder="Escribe aquí tu consulta..." rows="4" class="input-field"></textarea>
+          <textarea
+            v-model="newMessage"
+            placeholder="Escribe aquí tu consulta..."
+            rows="4"
+            class="input-field"
+          ></textarea>
         </div>
-        <button class="btn btn-primary mt-4" @click="startChat" :disabled="!newSubject || !newMessage">
-          Iniciar Chat con Asesor
+
+        <button
+          class="btn btn-primary mt-4"
+          @click="startChat"
+          :disabled="isSending || !newSubject.trim() || !newMessage.trim()"
+        >
+          {{ isSending ? 'Enviando...' : 'Iniciar Chat con Asesor' }}
         </button>
 
-        <div class="history-list mt-5" v-if="myChats.length > 0">
-          <h4 style="color:#8b949e; margin-bottom: 12px; font-size: 0.9rem;">Tus consultas anteriores</h4>
-          <div 
-            v-for="chat in myChats" 
-            :key="chat.id" 
-            class="history-item" 
-            @click="openChat(chat.id)"
+        <div class="history-list mt-5">
+          <h4 style="color:#8b949e; margin-bottom: 12px; font-size: 0.9rem;">
+            Tus consultas anteriores
+          </h4>
+
+          <div v-if="isLoading" style="color:#8b949e;">
+            Cargando consultas...
+          </div>
+
+          <div v-else-if="tickets.length === 0" style="color:#8b949e;">
+            Aún no tienes consultas registradas.
+          </div>
+
+          <div
+            v-else
+            v-for="ticket in tickets"
+            :key="ticket.id_ticket"
+            class="history-item"
+            @click="openChat(ticket.id_ticket)"
           >
             <div style="flex:1;">
-              <div style="font-weight: 600; color: #e6edf3;">{{ chat.subject }}</div>
+              <div style="font-weight: 600; color: #e6edf3;">
+                {{ ticket.subject }}
+              </div>
+
               <div style="font-size: 0.75rem; color: #8b949e; margin-top: 4px;">
-                Última act: {{ new Date(chat.lastUpdate).toLocaleString() }}
+                Última act: {{ formatDate(ticket.updated_at) }}
               </div>
             </div>
+
             <div>
-              <span class="status-badge" :class="chat.status === 'open' ? 'open' : 'closed'">
-                {{ chat.status === 'open' ? 'En Curso' : 'Cerrado' }}
+              <span class="status-badge" :class="ticket.status === 'open' ? 'open' : 'closed'">
+                {{ ticket.status === 'open' ? 'En Curso' : 'Cerrado' }}
               </span>
             </div>
           </div>
+        </div>
+
+        <div v-if="toastMessage" class="toast-notification">
+          {{ toastMessage }}
         </div>
       </div>
 
       <div v-else class="active-chat-panel">
         <div class="chat-header">
           <div>
-            <h3 style="margin: 0; font-size: 1.1rem; color: #e6edf3;">{{ activeChat?.subject }}</h3>
-            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #8b949e;">Conversando con Soporte Altoque</p>
+            <h3 style="margin: 0; font-size: 1.1rem; color: #e6edf3;">
+              {{ activeTicket?.subject }}
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #8b949e;">
+              Conversando con Soporte Altoque
+            </p>
           </div>
-          <button class="btn btn-ghost" @click="activeChatId = null">← Volver</button>
+
+          <button class="btn btn-ghost" @click="activeTicketId = null">
+            ← Volver
+          </button>
         </div>
 
         <div class="chat-messages" ref="messagesContainer">
-          <div 
-            v-for="msg in activeChat?.messages" 
-            :key="msg.id"
+          <div
+            v-for="msg in activeTicket?.messages || []"
+            :key="msg.id_message"
             class="message-bubble"
-            :class="msg.senderId === userId ? 'mine' : 'theirs'"
+            :class="msg.sender_role === 'client' || msg.sender_role === 'bank' ? 'mine' : 'theirs'"
           >
-            <div class="sender">{{ msg.senderName }}</div>
-            <div class="text">{{ msg.text }}</div>
-            <div class="time">{{ new Date(msg.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</div>
+            <div class="sender">{{ msg.sender_name }}</div>
+            <div class="text">{{ msg.message_text }}</div>
+            <div class="time">
+              {{ new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+            </div>
           </div>
         </div>
 
-        <div class="chat-input-area" v-if="activeChat?.status === 'open'">
-          <input 
-            type="text" 
-            v-model="replyText" 
-            placeholder="Escribe tu respuesta..." 
+        <div class="chat-input-area" v-if="activeTicket?.status === 'open'">
+          <input
+            type="text"
+            v-model="replyText"
+            placeholder="Escribe tu respuesta..."
             @keyup.enter="sendReply"
-            class="input-field" 
+            class="input-field"
           />
-          <button class="btn btn-primary" @click="sendReply" :disabled="!replyText.trim()">Enviar</button>
+
+          <button class="btn btn-primary" @click="sendReply" :disabled="!replyText.trim()">
+            Enviar
+          </button>
         </div>
+
         <div v-else class="chat-input-area text-center" style="justify-content: center; color: #8b949e;">
           Esta consulta ha sido cerrada.
+        </div>
+
+        <div v-if="toastMessage" class="toast-notification">
+          {{ toastMessage }}
         </div>
       </div>
     </div>
@@ -84,59 +138,135 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
-import { useSupportStore } from '../../../../config/useSupportStore';
+import {
+  createSupportTicketRequest,
+  getSupportTicketsByUserRequest,
+  sendSupportMessageRequest
+} from '../../../shared/api/altoqueApi';
 
 const authStore = useAuthStore();
-const { getChatsByUserId, getChatById, createNewChat, sendMessage } = useSupportStore();
 
-const userId = computed(() => authStore.user.value?.email || 'user_anon');
-const userName = computed(() => authStore.user.value?.name || 'Cliente');
+const currentUser = computed(() => {
+  return authStore.user.value;
+});
 
-const myChatsWrapper = getChatsByUserId(userId.value);
-const myChats = computed(() => myChatsWrapper.value);
+const userId = computed(() => {
+  return currentUser.value?.id_user;
+});
+
+const userName = computed(() => {
+  return currentUser.value?.display_name || currentUser.value?.username || 'Cliente';
+});
 
 const newSubject = ref('');
 const newMessage = ref('');
-const activeChatId = ref(null);
-const activeChat = computed(() => activeChatId.value ? getChatById(activeChatId.value).value : null);
 const replyText = ref('');
-const messagesContainer = ref(null);
+const tickets = ref([]);
+const activeTicketId = ref(null);
+const isLoading = ref(false);
+const isSending = ref(false);
+const toastMessage = ref('');
 
-const scrollToBottom = async () => {
-  await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+const activeTicket = computed(() => {
+  return tickets.value.find(ticket => ticket.id_ticket === activeTicketId.value) || null;
+});
+
+const showToast = (message) => {
+  toastMessage.value = message;
+  setTimeout(() => {
+    toastMessage.value = '';
+  }, 3000);
+};
+
+const loadMyTickets = async () => {
+  try {
+    if (!userId.value) return;
+
+    isLoading.value = true;
+
+    const response = await getSupportTicketsByUserRequest(userId.value);
+    tickets.value = Array.isArray(response) ? response : response.data || [];
+  } catch (error) {
+    console.error('Error al cargar tickets:', error);
+    showToast(error.message || 'No se pudieron cargar tus consultas.');
+  } finally {
+    isLoading.value = false;
   }
 };
 
-watch(() => activeChat.value?.messages.length, () => {
-  scrollToBottom();
-});
+const startChat = async () => {
+  try {
+    if (!userId.value) {
+      throw new Error('Debes iniciar sesión para enviar una consulta.');
+    }
 
-const startChat = () => {
-  if (newSubject.value && newMessage.value) {
-    const id = createNewChat(userId.value, userName.value, 'admin_support', newSubject.value, newMessage.value);
+    if (!newSubject.value.trim() || !newMessage.value.trim()) {
+      throw new Error('Completa el asunto y el mensaje.');
+    }
+
+    isSending.value = true;
+
+    const response = await createSupportTicketRequest({
+      id_user: userId.value,
+      subject: newSubject.value.trim(),
+      message: newMessage.value.trim(),
+      sender_role: 'client',
+      sender_name: userName.value
+    });
+
     newSubject.value = '';
     newMessage.value = '';
-    activeChatId.value = id;
-    scrollToBottom();
+
+    await loadMyTickets();
+
+    activeTicketId.value = response.ticketId;
+
+    showToast('Consulta enviada correctamente.');
+  } catch (error) {
+    console.error('Error al crear ticket:', error);
+    showToast(error.message || 'No se pudo enviar la consulta.');
+  } finally {
+    isSending.value = false;
   }
 };
 
 const openChat = (id) => {
-  activeChatId.value = id;
-  scrollToBottom();
+  activeTicketId.value = id;
 };
 
-const sendReply = () => {
-  if (replyText.value.trim() && activeChatId.value) {
-    sendMessage(activeChatId.value, userId.value, userName.value, replyText.value.trim());
+const sendReply = async () => {
+  try {
+    if (!replyText.value.trim() || !activeTicketId.value) return;
+
+    await sendSupportMessageRequest(activeTicketId.value, {
+      sender_role: 'client',
+      sender_name: userName.value,
+      message: replyText.value.trim()
+    });
+
     replyText.value = '';
-    scrollToBottom();
+    await loadMyTickets();
+  } catch (error) {
+    console.error('Error al enviar mensaje:', error);
+    showToast(error.message || 'No se pudo enviar el mensaje.');
   }
 };
+
+const formatDate = (dateValue) => {
+  if (!dateValue) return '-';
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleString();
+};
+
+onMounted(() => {
+  loadMyTickets();
+});
 </script>
 
 <style scoped>

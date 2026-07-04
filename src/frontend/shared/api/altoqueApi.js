@@ -209,6 +209,18 @@ export const createSupportTicketRequest = async (payload) => {
   return data;
 };
 
+export const getSupportTicketsByUserRequest = async (userId) => {
+  const response = await fetch(`${API_URL}/support/tickets/user/${userId}`);
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar tus tickets');
+  }
+
+  return data;
+};
+
 export const getSupportTicketsRequest = async () => {
   const response = await fetch(`${API_URL}/support/tickets`);
 
