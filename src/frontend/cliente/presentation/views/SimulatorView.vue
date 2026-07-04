@@ -202,9 +202,16 @@
       <button class="btn btn-primary btn-block" @click="handleSave">
         Guardar Escenario
       </button>
-      <div v-if="saveMessage" class="save-toast">
-        {{ saveMessage }}
-      </div>
+
+      <div v-if="toast.show" class="toast-notification" :class="toast.type">
+  <div class="toast-icon">
+    {{ toast.type === 'success' ? '✓' : '!' }}
+  </div>
+  <div>
+    <strong>{{ toast.title }}</strong>
+    <p>{{ toast.message }}</p>
+  </div>
+</div>
     </div> <!-- Cierra save-panel -->
 
   </div> <!-- Cierra left-column -->
@@ -265,7 +272,9 @@
       <div class="schedule-card">
         <div class="card-header">
           <h3>Cronograma de pagos</h3>
-          <button class="btn btn-ghost text-sm">Ver completo →</button>
+          <button class="btn-link" style="color: white !important;" @click="exportScheduleToPDF">
+            Exportar en PDF
+          </button>
         </div>
         <div class="table-container">
           <table>
@@ -281,7 +290,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in schedule" :key="item.month">
+              <tr v-for="item in schedule.slice(0, 6)" :key="item.month">
                 <td>{{ item.month }}</td>
                 <td><span class="type-badge" :class="getTypeClass(item.type)">{{ item.type }}</span></td>
                 <td><span class="currency">S/</span> {{ formatMoney(item.initialBalance) }}</td>
@@ -313,6 +322,8 @@ import {
 import { Bar } from 'vue-chartjs';
 import { saveCreditRequest } from '../../../shared/api/altoqueApi';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -348,7 +359,25 @@ const {
   saveCurrentSimulation
 } = useCreditSimulator();
 
-const saveMessage = ref('');
+const toast = ref({
+  show: false,
+  type: 'success',
+  title: '',
+  message: ''
+});
+
+const showToast = (type, title, message) => {
+  toast.value = {
+    show: true,
+    type,
+    title,
+    message
+  };
+
+  setTimeout(() => {
+    toast.value.show = false;
+  }, 3500);
+};
 
 const authStore = useAuthStore();
 const isSaving = ref(false);
@@ -356,7 +385,6 @@ const isSaving = ref(false);
 const handleSave = async () => {
   try {
     isSaving.value = true;
-    saveMessage.value = '';
 
     const currentUser = authStore.user.value;
 
@@ -393,11 +421,11 @@ const handleSave = async () => {
         rateValue: Number(rateValue.value),
         capitalization: Number(capitalization.value),
         hasVehicularInsurance: hasVehicularInsurance.value,
-        vehicularInsurancePercentage: 0.25,
+        vehicularInsurancePercentage: 0,
         hasDesgravamen: hasDesgravamen.value,
         desgravamenRate: Number(desgravamenRate.value),
         hasPortes: hasPortes.value,
-        portesValue: 15,
+        portesValue: 0,
         gracePeriodsTotal: Number(gracePeriodsTotal.value),
         gracePeriodsPartial: Number(gracePeriodsPartial.value),
         residualValue: Number(residualValue.value)
@@ -431,13 +459,92 @@ const handleSave = async () => {
     await saveCreditRequest(payload);
 
     saveCurrentSimulation();
-    saveMessage.value = '¡Simulación guardada en MySQL y en tu historial!';
+
+    showToast(
+      'success',
+      'Simulación guardada',
+      'Tu escenario fue guardado correctamente'
+    );
+   
   } catch (error) {
-    saveMessage.value = error.message;
+   showToast(
+    'error',
+    'No se pudo guardar',
+    error.message || 'Ocurrió un error al guardar la simulación.'
+  );
   } finally {
     isSaving.value = false;
-    setTimeout(() => { saveMessage.value = ''; }, 4000);
+   
   }
+};
+
+const exportScheduleToPDF = () => {
+  const doc = new jsPDF();
+
+  const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+  const logoX = pageWidth - 50;
+  const logoY = 12;
+  const scale = 0.25;
+
+  doc.setFillColor(59, 130, 246);
+  doc.lines(
+    [[-16, 32], [8, 0], [8, -16], [8, 16], [8, 0], [-16, -32]],
+    logoX + 20 * scale,
+    logoY + 4 * scale,
+    [scale, scale],
+    'F'
+  );
+
+  doc.setFillColor(0, 180, 216);
+  doc.lines(
+    [[26, -10], [-3, -5], [-26, 10], [3, 5]],
+    logoX + 9 * scale,
+    logoY + 25 * scale,
+    [scale, scale],
+    'F'
+  );
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(59, 130, 246);
+  doc.text('Altoque', logoX + 12, logoY + 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  doc.setTextColor(139, 148, 158);
+  doc.text('PREMIUM FINTECH', logoX + 12, logoY + 9);
+
+  doc.setFontSize(18);
+  doc.setTextColor(0);
+  doc.text('Cronograma de Pagos', 14, 22);
+
+  doc.setFontSize(11);
+  doc.text(
+    `Vehículo: ${currency.value === 'PEN' ? 'S/' : '$'} ${formatMoney(vehiclePrice.value)} | Plazo: ${periods.value} meses`,
+    14,
+    30
+  );
+
+  const scheduleBody = schedule.value.map(row => [
+    row.month,
+    row.type,
+    `${currency.value === 'PEN' ? 'S/' : '$'} ${formatMoney(row.initialBalance)}`,
+    `${currency.value === 'PEN' ? 'S/' : '$'} ${formatMoney(row.interest)}`,
+    `${currency.value === 'PEN' ? 'S/' : '$'} ${formatMoney(row.amortization)}`,
+    `${currency.value === 'PEN' ? 'S/' : '$'} ${formatMoney(row.insurance)}`,
+    `${currency.value === 'PEN' ? 'S/' : '$'} ${formatMoney(row.totalQuota)}`
+  ]);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [['N°', 'Tipo', 'Saldo Ini.', 'Interés', 'Amortización', 'Seguros', 'Cuota']],
+    body: scheduleBody,
+    theme: 'grid',
+    headStyles: { fillColor: [33, 38, 45] },
+    styles: { fontSize: 9 }
+  });
+
+  doc.save('Cronograma_Pagos.pdf');
 };
 
 const formatMoney = (val) => {
@@ -515,6 +622,86 @@ const chartOptions = {
 </script>
 
 <style scoped>
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  min-width: 320px;
+  max-width: 420px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  color: #ffffff;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  animation: slideInToast 0.25s ease-out;
+}
+
+.toast-notification.success {
+  background: #16a34a;
+}
+
+.toast-notification.error {
+  background: #dc2626;
+}
+
+.toast-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.toast-notification strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.toast-notification p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+@keyframes slideInToast {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+  color: #60a5fa;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .simulator-view {
   display: flex;
   gap: 24px;
@@ -712,6 +899,7 @@ input:disabled, select:disabled {
 }
 
 .slider {
+  appearance: none;
   -webkit-appearance: none;
   width: 100%;
   height: 4px;
@@ -721,6 +909,7 @@ input:disabled, select:disabled {
 }
 
 .slider::-webkit-slider-thumb {
+  appearance: none;
   -webkit-appearance: none;
   appearance: none;
   width: 16px;

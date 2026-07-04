@@ -1,10 +1,19 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useAdminNotificationsStore } from '../../application/useAdminNotificationsStore';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { notifications, getUnreadCount, markAsRead } = useAdminNotificationsStore();
+
+const unreadCount = computed(() => getUnreadCount());
+const showNotifications = ref(false);
+
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value;
+};
 
 const logout = () => {
   authStore.logout();
@@ -50,8 +59,45 @@ const logout = () => {
     <!-- Main Content -->
     <main class="main-content">
       <header class="topbar">
-        <h1 class="page-title">Consola de Administración Global</h1>
-      </header>
+  <h1 class="page-title">Consola de Administración Global</h1>
+
+  <div class="topbar-actions">
+    <div class="notification-wrapper">
+      <button class="notification-btn" @click="toggleNotifications">
+        🔔
+        <span class="notification-badge" v-if="unreadCount > 0">
+          {{ unreadCount }}
+        </span>
+      </button>
+
+      <div class="notification-dropdown" v-if="showNotifications">
+        <div class="dropdown-header">
+          <h4>Notificaciones</h4>
+        </div>
+
+        <div class="dropdown-body">
+          <div
+            v-for="notif in notifications.slice().reverse()"
+            :key="notif.id"
+            class="notification-item"
+            :class="{ unread: !notif.read }"
+            @click="markAsRead(notif.id)"
+          >
+            <div class="notif-icon">⚠️</div>
+            <div class="notif-content">
+              <p class="notif-text">{{ notif.message }}</p>
+              <span class="notif-time">Reciente</span>
+            </div>
+          </div>
+
+          <div v-if="notifications.length === 0" class="empty-notif">
+            No hay notificaciones
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
 
       <div class="content-wrapper">
         <router-view></router-view>
@@ -61,6 +107,120 @@ const logout = () => {
 </template>
 
 <style scoped>
+/* Notifications */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  position: relative;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.notification-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 320px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  z-index: 100;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.dropdown-header {
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dropdown-header h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.dropdown-body {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f8fafc;
+}
+
+.notification-item.unread {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.notif-icon {
+  font-size: 1.5rem;
+}
+
+.notif-content {
+  flex: 1;
+}
+
+.notif-text {
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.notif-time {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.empty-notif {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
 .admin-container {
   display: flex;
   height: 100vh;

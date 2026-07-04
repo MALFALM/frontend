@@ -7,19 +7,40 @@
         <button class="tab" :class="{ active: tab === 'admin' }" @click="tab = 'admin'">Administrador</button>
       </div>
 
+      <!-- CLIENTE -->
       <div v-if="tab === 'client'" class="tab-content">
         <h2 class="view-title">Bienvenido</h2>
-        <p class="view-subtitle">Accede a tu simulador financiero y empieza a analizar créditos vehiculares al instante.</p>
+        <p class="view-subtitle">
+          Accede a tu simulador financiero y empieza a analizar créditos vehiculares al instante.
+        </p>
         
         <form @submit.prevent="handleLogin" class="auth-form">
           <div class="form-group">
             <label>Correo electrónico</label>
-            <input v-model="username" type="email" placeholder="correo@ejemplo.com" required class="input-field" />
+            <input
+              v-model="username"
+              type="email"
+              placeholder="correo@ejemplo.com"
+              required
+              class="input-field"
+            />
           </div>
           
           <div class="form-group">
             <label>Contraseña</label>
-            <input v-model="password" type="password" placeholder="••••••••" required class="input-field" />
+            <div class="input-wrapper">
+              <input
+                v-model="password"
+                :type="showClientPassword ? 'text' : 'password'"
+                placeholder="••••••••"
+                required
+                class="input-field"
+                style="width: 100%; padding-right: 40px;"
+              />
+              <button type="button" class="eye-btn" @click="showClientPassword = !showClientPassword">
+                {{ showClientPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
           </div>
           
           <div class="form-options">
@@ -30,60 +51,123 @@
             <a href="#" class="link-primary">¿Olvidaste tu contraseña?</a>
           </div>
 
-          <p v-if="errorMessage" style="color: #dc2626; font-size: 0.9rem;">
+          <p v-if="errorMessage" class="error-text">
             {{ errorMessage }}
           </p>
           
-          <button type="submit" class="btn btn-primary btn-block">Iniciar sesión</button>
+          <button type="submit" class="btn btn-primary btn-block" :disabled="isLoading">
+            {{ isLoading ? 'Ingresando...' : 'Iniciar sesión' }}
+          </button>
         </form>
         
-        <div class="divider">
-          <span>o continuar con</span>
-        </div>
-        
-        <button class="btn btn-outline btn-block google-btn" @click="handleGoogleLogin">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="google-icon" />
-          Continuar con Google
-        </button>
-        
         <p class="auth-footer">
-          ¿No tienes cuenta? <router-link to="/register" class="link-primary font-bold">Regístrate</router-link>
+          ¿No tienes cuenta?
+          <router-link to="/register" class="link-primary font-bold">Regístrate</router-link>
         </p>
       </div>
 
+      <!-- ENTIDAD FINANCIERA -->
       <div v-if="tab === 'bank'" class="tab-content">
         <h2 class="view-title">Portal Financiero</h2>
-        <p class="view-subtitle">Selecciona tu entidad financiera para administrar tus productos y campañas.</p>
+        <p class="view-subtitle">
+          Ingresa con tu cuenta corporativa para administrar tus productos y campañas.
+        </p>
         
-        <div class="bank-options">
-          <button 
-            v-for="entity in entities"
-            :key="entity.id"
-            class="btn btn-block bank-btn" 
-            :style="{ borderColor: entity.themeColor || '#334155', color: entity.themeColor || '#334155' }"
-            @click="handleBankLogin(entity.id)"
-            @mouseover="e => { e.target.style.backgroundColor = entity.themeColor || '#334155'; e.target.style.color = 'white'; }"
-            @mouseleave="e => { e.target.style.backgroundColor = 'white'; e.target.style.color = entity.themeColor || '#334155'; }"
-          >
-            <span class="icon">🏦</span> Ingresar como {{ entity.name || 'Entidad Desconocida' }}
+        <form @submit.prevent="handleBankLoginSubmit" class="auth-form">
+          <div class="form-group">
+            <label>Correo corporativo</label>
+            <input
+              v-model="bankEmail"
+              type="email"
+              placeholder="correo@banco.com.pe"
+              required
+              class="input-field"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label>Contraseña</label>
+            <div class="input-wrapper">
+              <input
+                v-model="bankPassword"
+                :type="showBankPassword ? 'text' : 'password'"
+                placeholder="••••••••"
+                required
+                class="input-field"
+                style="width: 100%; padding-right: 40px;"
+              />
+              <button type="button" class="eye-btn" @click="showBankPassword = !showBankPassword">
+                {{ showBankPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
+          </div>
+          
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input type="checkbox" />
+              <span>Recordarme</span>
+            </label>
+            <a href="#" class="link-primary">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <p v-if="bankLoginError" class="error-text">
+            {{ bankLoginError }}
+          </p>
+          
+          <button type="submit" class="btn btn-primary btn-block" :disabled="isLoading">
+            {{ isLoading ? 'Ingresando...' : 'Ingresar como Entidad' }}
           </button>
-        </div>
+        </form>
       </div>
 
+      <!-- ADMIN -->
       <div v-if="tab === 'admin'" class="tab-content">
         <h2 class="view-title">Super Admin</h2>
-        <p class="view-subtitle">Acceso exclusivo para el administrador global de la plataforma.</p>
+        <p class="view-subtitle">
+          Acceso exclusivo para el administrador global de la plataforma.
+        </p>
         
         <form @submit.prevent="handleAdminLogin" class="auth-form">
           <div class="form-group">
             <label>Usuario / Correo</label>
-            <input type="text" placeholder="admin@altoque.com" required class="input-field" />
+            <input
+              v-model="adminUsername"
+              type="text"
+              placeholder="admin@altoque.com"
+              required
+              class="input-field"
+            />
           </div>
+
           <div class="form-group">
             <label>Contraseña maestra</label>
-            <input type="password" placeholder="••••••••" required class="input-field" />
+            <div class="input-wrapper">
+              <input
+                v-model="adminPassword"
+                :type="showAdminPassword ? 'text' : 'password'"
+                placeholder="••••••••"
+                required
+                class="input-field"
+                style="width: 100%; padding-right: 40px;"
+              />
+              <button type="button" class="eye-btn" @click="showAdminPassword = !showAdminPassword">
+                {{ showAdminPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary btn-block" style="background-color: #000; border-color: #000;">Ingresar a la Consola</button>
+
+          <p v-if="adminLoginError" class="error-text">
+            {{ adminLoginError }}
+          </p>
+
+          <button
+            type="submit"
+            class="btn btn-primary btn-block"
+            style="background-color: #000; border-color: #000;"
+            :disabled="isLoading"
+          >
+            {{ isLoading ? 'Ingresando...' : 'Ingresar a la Consola' }}
+          </button>
         </form>
       </div>
     </div>
@@ -95,12 +179,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthLayout from '../layouts/AuthLayout.vue';
 import { useAuthStore } from '../../application/useAuthStore';
-import { useEntitiesStore } from '../../../frontend/entidad-financiera/application/useEntitiesStore';
 import {loginRequest} from '../../../frontend/shared/api/altoqueApi';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { entities } = useEntitiesStore();
 const tab = ref('client');
 
 const username = ref('');
@@ -108,43 +190,106 @@ const password = ref('');
 const errorMessage = ref('');
 const isLoading = ref(false);
 
-const handleLogin = async () => {
-  try {
-    errorMessage.value = '';
-    isLoading.value = true;
+const showClientPassword = ref(false);
+const showBankPassword = ref(false);
+const showAdminPassword = ref(false);
 
-    const data = await loginRequest(username.value, password.value);
+const bankEmail = ref('');
+const bankPassword = ref('');
+const bankLoginError = ref('');
+
+const adminUsername = ref('');
+const adminPassword = ref('');
+const adminLoginError = ref('');
+
+
+const redirectByRole = (user) => {
+  const role = (user?.rol || user?.role || '').toLowerCase();
+
+  if (role === 'admin') {
+    router.push('/admin');
+  } else if (role === 'bank' || role === 'asesor' || role === 'entidad') {
+    router.push('/banco');
+  } else {
+    router.push('/inicio');
+  }
+};
+
+const loginWithBackend = async (loginUsername, loginPassword, errorRef) => {
+  try {
+    isLoading.value = true;
+    errorRef.value = '';
+
+    const data = await loginRequest(loginUsername, loginPassword);
 
     authStore.loginWithBackend({
       token: data.token,
       user: data.user
     });
 
-    router.push('/inicio');
+    redirectByRole(data.user);
   } catch (error) {
-    errorMessage.value = error.message;
+    errorRef.value = error.message || 'No se pudo iniciar sesión';
   } finally {
     isLoading.value = false;
   }
 };
 
-const handleGoogleLogin = () => {
-  authStore.loginAsClient('Alex Mercer', 'alex@gmail.com');
-  router.push('/inicio');
+const handleLogin = () => {
+  loginWithBackend(username.value, password.value, errorMessage);
 };
 
-const handleBankLogin = (bankId) => {
-  authStore.loginAsBank(bankId);
-  router.push('/banco');
+const handleBankLoginSubmit = () => {
+  loginWithBackend(bankEmail.value, bankPassword.value, bankLoginError);
 };
 
 const handleAdminLogin = () => {
-  authStore.loginAsAdmin();
-  router.push('/admin');
+  loginWithBackend(adminUsername.value, adminPassword.value, adminLoginError);
 };
 </script>
 
 <style scoped>
+.error-text {
+  color: #ef4444;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.mt-2 {
+  margin-top: 16px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-btn:hover {
+  opacity: 1;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .login-view {
   width: 100%;
   max-width: 400px;

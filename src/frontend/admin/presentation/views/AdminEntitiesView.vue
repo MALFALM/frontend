@@ -1,10 +1,23 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useEntitiesStore } from '../../../entidad-financiera/application/useEntitiesStore';
+import { useAdminNotificationsStore } from '../../application/useAdminNotificationsStore';
+import { createBankRequest } from '../../../shared/api/altoqueApi';
 
 const { entities, addEntity } = useEntitiesStore();
+const { notifications } = useAdminNotificationsStore();
+
+const suspendingBankIds = computed(() => {
+  return notifications.value
+    .filter(n => n.type === 'suspension_request')
+    .map(n => n.bankId);
+});
 
 const showModal = ref(false);
+const showCredentialsModal = ref(false);
+const generatedCredentials = ref(null);
+const errorMessage = ref('');
+
 const newEntity = ref({
   name: '',
   id: '',
@@ -13,22 +26,62 @@ const newEntity = ref({
 
 const generateIdFromName = () => {
   if (newEntity.value.name && !newEntity.value.id) {
-    newEntity.value.id = newEntity.value.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    newEntity.value.id = newEntity.value.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
   }
 };
 
-const handleSave = () => {
-  if (newEntity.value.name && newEntity.value.id) {
+const handleSave = async () => {
+  if (!newEntity.value.name || !newEntity.value.id) return;
+
+  try {
+    errorMessage.value = '';
+
+    const email = `admin@${newEntity.value.id}.com`;
+    const password = Math.random().toString(36).slice(-8);
+
+    console.log('Creando banco en backend:', {
+      username: email,
+      password
+    });
+
+    await createBankRequest({
+      username: email,
+      password
+    });
+
     addEntity({
       id: newEntity.value.id,
       name: newEntity.value.name,
       themeColor: newEntity.value.themeColor,
       products: []
     });
-    
+
+    generatedCredentials.value = {
+      email,
+      password,
+      name: newEntity.value.name
+    };
+
     showModal.value = false;
-    newEntity.value = { name: '', id: '', themeColor: '#000000' };
+    showCredentialsModal.value = true;
+
+    newEntity.value = {
+      name: '',
+      id: '',
+      themeColor: '#000000'
+    };
+  } catch (error) {
+    console.error('Error al guardar entidad:', error);
+    errorMessage.value = error.message || 'No se pudo registrar el banco.';
   }
+};
+
+const closeCredentialsModal = () => {
+  showCredentialsModal.value = false;
+  generatedCredentials.value = null;
 };
 </script>
 
@@ -55,11 +108,12 @@ const handleSave = () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="entity in entities" :key="entity.id">
+          <tr v-for="entity in entities" :key="entity.id" :class="{ 'suspension-row': suspendingBankIds.includes(entity.id) }">
             <td class="font-bold">
               <div class="bank-name-col">
                 <div class="color-dot" :style="{ backgroundColor: entity.themeColor || '#ccc' }"></div>
                 {{ entity.name }}
+                <span v-if="suspendingBankIds.includes(entity.id)" title="Solicitud de suspensión pendiente">⚠️</span>
               </div>
             </td>
             <td class="text-gray">{{ entity.id }}</td>
@@ -68,7 +122,9 @@ const handleSave = () => {
             </td>
             <td>{{ entity.products ? entity.products.length : 0 }} activos</td>
             <td>
-              <span class="status-badge active">Activo</span>
+              <span class="status-badge" :class="suspendingBankIds.includes(entity.id) ? 'warning' : 'active'">
+                {{ suspendingBankIds.includes(entity.id) ? 'En revisión' : 'Activo' }}
+              </span>
             </td>
             <td>
               <button class="btn btn-outline-small">Suspender</button>
@@ -108,6 +164,9 @@ const handleSave = () => {
               <input type="text" v-model="newEntity.themeColor" class="input-field text-input" />
             </div>
           </div>
+          <p v-if="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </p>
         </div>
         
         <div class="modal-footer">
@@ -116,10 +175,46 @@ const handleSave = () => {
         </div>
       </div>
     </div>
+
+    <!-- Modal Credenciales Generadas (Mock) -->
+  <div v-if="showCredentialsModal && generatedCredentials" class="modal-overlay" @click.self="closeCredentialsModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>¡Banco Creado Exitosamente!</h3>
+      <button class="close-btn" @click="closeCredentialsModal">✕</button>
+    </div>
+    
+    <div class="modal-body text-center">
+      <div style="font-size: 3rem; margin-bottom: 16px;">✉️</div>
+      <p style="color: #64748b; margin-bottom: 16px;">
+        El banco <strong>{{ generatedCredentials.name }}</strong> ha sido registrado. 
+        Como esto es un entorno de simulación, estas son las credenciales generadas para ingresar:
+      </p>
+      <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1; text-align: left;">
+        <p><strong>Correo corporativo:</strong> {{ generatedCredentials.email }}</p>
+        <p><strong>Contraseña:</strong> {{ generatedCredentials.password }}</p>
+      </div>
+      <p style="color: #ef4444; font-size: 0.85rem; margin-top: 16px;">
+        En producción, estas credenciales serían enviadas por correo electrónico al representante del banco, ya que el sistema no admite el registro directo de entidades.
+      </p>
+    </div>
+    
+    <div class="modal-footer" style="justify-content: center;">
+      <button class="btn btn-primary" @click="closeCredentialsModal">Entendido</button>
+    </div>
+  </div>
+</div>
   </div>
 </template>
 
 <style scoped>
+.error-message {
+  color: #ef4444;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
 .header-actions {
   display: flex;
   justify-content: space-between;

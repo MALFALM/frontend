@@ -37,6 +37,21 @@ const routes = [
         component: () => import('../frontend/cliente/presentation/views/NewSimulationView.vue')
       },
       {
+        path: 'soporte',
+        name: 'ClientSupport',
+        component: () => import('../frontend/cliente/presentation/views/ClientSupportView.vue')
+      },
+      {
+        path: 'soporte',
+        name: 'BankSupport',
+        component: () => import('../frontend/entidad-financiera/presentation/views/BankSupportView.vue')
+      },
+      {
+        path: 'soporte',
+        name: 'AdminSupport',
+        component: () => import('../frontend/admin/presentation/views/AdminSupportView.vue')
+      },
+      {
         path: 'mis-simulaciones',
         name: 'MisSimulaciones',
         component: () => import('../frontend/cliente/presentation/views/SavedSimulationsView.vue')
@@ -71,6 +86,11 @@ const routes = [
         path: 'promociones',
         name: 'BankPromotions',
         component: () => import('../frontend/entidad-financiera/presentation/views/BankPromotionsView.vue')
+      },
+      {
+        path: 'soporte',
+        name: 'BankSupport',
+        component: () => import('../frontend/entidad-financiera/presentation/views/BankSupportView.vue')
       },
       {
         path: 'ajustes',

@@ -9,18 +9,39 @@ const authStore = useAuthStore();
 const { getEntityById } = useEntitiesStore();
 
 // Información dinámica del banco
-const bankId = computed(() => authStore.user.value?.bankId || 'bcp');
+const bankId = computed(() => {
+  const user = authStore.user.value;
+
+  if (user?.bankId) return user.bankId;
+
+  const email = user?.username || '';
+
+  if (email.includes('bcp')) return 'bcp';
+  if (email.includes('bbva')) return 'bbva';
+  if (email.includes('interbank')) return 'interbank';
+  if (email.includes('scotiabank')) return 'scotiabank';
+
+  return 'bcp';
+});
+
 const bankEntity = computed(() => getEntityById(bankId.value));
 
 const bankTheme = computed(() => {
   if (bankEntity.value) {
-    return { 
-      name: bankEntity.value.name, 
-      color: bankEntity.value.themeColor ? bankEntity.value.themeColor.replace('#', '') : 'ff5a00', 
-      hex: bankEntity.value.themeColor || '#ff5a00' 
+    return {
+      name: bankEntity.value.name,
+      color: bankEntity.value.themeColor
+        ? bankEntity.value.themeColor.replace('#', '')
+        : 'ff5a00',
+      hex: bankEntity.value.themeColor || '#ff5a00'
     };
   }
-  return { name: 'Banco', color: 'ff5a00', hex: '#ff5a00' };
+
+  return {
+    name: 'Banco',
+    color: 'ff5a00',
+    hex: '#ff5a00'
+  };
 });
 
 const bankName = computed(() => bankTheme.value.name);
@@ -53,6 +74,12 @@ const logout = () => {
           <span class="icon">🎁</span>
           <span>Mis Promos</span>
         </router-link>
+
+        <router-link to="/banco/soporte" class="nav-item" active-class="active">
+          <span class="icon">🎧</span>
+          <span>Soporte</span>
+        </router-link>
+
         <router-link to="/banco/ajustes" class="nav-item" active-class="active">
           <span class="icon">⚙</span>
           <span>Configuración</span>
@@ -85,6 +112,16 @@ const logout = () => {
 </template>
 
 <style scoped>
+.icon-logout {
+  color: #8b949e;
+  font-size: 1.1rem;
+  transition: color 0.2s;
+}
+
+.user-profile:hover .icon-logout {
+  color: #ffffff;
+}
+
 /* Reutilizamos los estilos base del Dashboard del cliente pero con un toque distintivo */
 .bank-container {
   display: flex;

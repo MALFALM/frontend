@@ -6,53 +6,87 @@
       
       <div class="role-selector">
         <button 
+          type="button"
           class="role-btn" 
           :class="{ active: role === 'cliente' }" 
           @click="role = 'cliente'"
-        >Cliente</button>
+        >
+          Cliente
+        </button>
+
         <button 
+          type="button"
           class="role-btn" 
           :class="{ active: role === 'entidad' }" 
           @click="role = 'entidad'"
-        >Entidad financiera</button>
+        >
+          Entidad financiera
+        </button>
       </div>
       
       <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
           <label>Nombre completo</label>
-          <input v-model="fullName" type="text" placeholder="Ej: Juan Pérez" required class="input-field" />
+          <input
+            v-model="fullName"
+            type="text"
+            placeholder="Ej: Juan Pérez"
+            required
+            class="input-field"
+          />
         </div>
         
         <div class="form-group">
           <label>Correo electrónico</label>
-          <input v-model="email" type="email" placeholder="correo@ejemplo.com" required class="input-field" />
-          <span v-if="role === 'entidad'" class="field-hint">Usa el correo corporativo proporcionado por el banco.</span>
+          <input
+            v-model="email"
+            type="email"
+            placeholder="correo@ejemplo.com"
+            required
+            class="input-field"
+          />
+
+          <span v-if="role === 'entidad'" class="field-hint">
+            Usa el correo corporativo proporcionado por el banco.
+          </span>
         </div>
         
         <div class="form-group">
           <label>Contraseña</label>
-          <input v-model="password" type="password" placeholder="••••••••" required class="input-field" />
+          <input
+            v-model="password"
+            type="password"
+            placeholder="••••••••"
+            required
+            class="input-field"
+          />
         </div>
         
         <div class="form-group">
           <label>Confirmar contraseña</label>
-          <input v-model="confirmPassword" type="password" placeholder="••••••••" required class="input-field" />
+          <input
+            v-model="confirmPassword"
+            type="password"
+            placeholder="••••••••"
+            required
+            class="input-field"
+          />
         </div>
         
-        <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
+        <button
+          type="submit"
+          class="btn btn-primary btn-block"
+          :disabled="isLoading"
+        >
+          {{ isLoading ? 'Creando cuenta...' : 'Crear cuenta' }}
+        </button>
       </form>
       
-      <div class="divider">
-        <span>o continuar con</span>
-      </div>
-      
-      <button class="btn btn-outline btn-block google-btn" @click="handleGoogleRegister">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="google-icon" />
-        Continuar con Google
-      </button>
-      
       <p class="auth-footer">
-        ¿Ya tienes cuenta? <router-link to="/login" class="link-primary font-bold">Inicia sesión</router-link>
+        ¿Ya tienes cuenta?
+        <router-link to="/login" class="link-primary font-bold">
+          Inicia sesión
+        </router-link>
       </p>
 
       <div v-if="toastMessage" class="toast-notification" :class="toastType">
@@ -66,6 +100,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthLayout from '../layouts/AuthLayout.vue';
+import { registerRequest } from '../../../frontend/shared/api/altoqueApi.js';
 
 const router = useRouter();
 const role = ref('cliente');
@@ -97,6 +132,14 @@ const handleRegister = async () => {
     toastMessage.value = '';
     isLoading.value = true;
 
+    if (!fullName.value.trim()) {
+      throw new Error('Ingresa tu nombre completo');
+    }
+
+    if (!email.value.trim()) {
+      throw new Error('Ingresa tu correo electrónico');
+    }
+
     if (password.value !== confirmPassword.value) {
       throw new Error('Las contraseñas no coinciden');
     }
@@ -105,31 +148,18 @@ const handleRegister = async () => {
       throw new Error('La contraseña debe tener mínimo 8 caracteres');
     }
 
-    const response = await fetch('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: email.value,
-        password: password.value,
-        rol: getBackendRole(),
-        name: fullName.value
-      })
+    await registerRequest({
+      username: email.value,
+      password: password.value,
+      rol: getBackendRole(),
+      name: fullName.value
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'No se pudo crear la cuenta');
-    }
 
     showToast('Cuenta creada correctamente', 'success');
 
     setTimeout(() => {
       router.push('/login');
     }, 1000);
-
   } catch (error) {
     showToast(error.message || 'No se pudo crear la cuenta', 'error');
   } finally {
@@ -137,12 +167,17 @@ const handleRegister = async () => {
   }
 };
 
+
 const handleGoogleRegister = () => {
   router.push('/inicio');
 };
 </script>
 
 <style scoped>
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .toast-notification {
   position: fixed;

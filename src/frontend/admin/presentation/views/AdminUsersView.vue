@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { getUsersRequest, getCreditsByUserRequest } from '../../../shared/api/altoqueApi';
 import AdminUserDetailsModal from './AdminUserDetailsModal.vue';
 
 // Mock de usuarios registrados con historial extendido
@@ -43,16 +44,221 @@ const mockUsers = ref([
   }
 ]);
 
-const getStatusClass = (status) => {
-  return status === 'Activo' ? 'status-active' : 'status-inactive';
-};
+const backendUsers = ref([]);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
 const showModal = ref(false);
 const selectedUser = ref(null);
 
-const openUserDetails = (user) => {
+const loadUsers = async () => {
+  try {
+    errorMessage.value = '';
+    isLoading.value = true;
+
+    const response = await getUsersRequest();
+
+    console.log('Usuarios desde backend:', response);
+
+    if (Array.isArray(response)) {
+      backendUsers.value = response;
+    } else if (Array.isArray(response.data)) {
+      backendUsers.value = response.data;
+    } else if (Array.isArray(response.users)) {
+      backendUsers.value = response.users;
+    } else {
+      backendUsers.value = [];
+    }
+  } catch (error) {
+    console.error('Error al cargar usuarios:', error);
+    errorMessage.value = error.message || 'No se pudieron cargar los usuarios.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadUsers();
+});
+
+const getNameFromEmail = (email) => {
+  if (!email) return 'Cliente';
+
+  return email
+    .split('@')[0]
+    .replace(/[._-]/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+};
+
+const formatDate = (dateValue) => {
+  if (!dateValue) return '-';
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toISOString().split('T')[0];
+};
+
+
+const mappedBackendUsers = computed(() => {
+  return backendUsers.value
+    .filter(user => {
+      const role = (user.rol || user.role || '').toLowerCase();
+      return role === 'client' || role === 'cliente';
+    })
+    .map(user => ({
+      id: `db_${user.id_user}`,
+      id_user: user.id_user,
+      name: user.name || user.fullName || getNameFromEmail(user.username),
+      email: user.username,
+      registeredAt: formatDate(user.created_at || user.createdAt),
+      status: user.estado_cuenta === 0 || user.estado_cuenta === false ? 'Inactivo' : 'Activo',
+      simulations: 0,
+      avgTicket: 'N/A',
+      bankPreferences: [],
+      recentSimulations: []
+    }));
+});
+
+const usersToShow = computed(() => {
+  const mockEmails = mockUsers.value.map(user => user.email);
+
+  const realUsersWithoutDuplicates = mappedBackendUsers.value.filter(user => {
+    return !mockEmails.includes(user.email);
+  });
+
+  return [
+    ...mockUsers.value,
+    ...realUsersWithoutDuplicates
+  ];
+});
+
+const getStatusClass = (status) => {
+  return status === 'Activo' ? 'status-active' : 'status-inactive';
+};
+
+const openUserDetails = async (user) => {
   selectedUser.value = user;
   showModal.value = true;
+
+  if (!user.id_user) {
+    return;
+  }
+
+  try {
+    const response = await getCreditsByUserRequest(user.id_user);
+    const credits = Array.isArray(response) ? response : response.data || [];
+
+    selectedUser.value = {
+      ...user,
+      simulations: credits.length,
+      avgTicket: calculateAvgTicket(credits),
+      bankPreferences: buildBankPreferences(credits),
+      recentSimulations: buildRecentSimulations(credits)
+    };
+  } catch (error) {
+    console.error('Error al cargar simulaciones del usuario:', error);
+  }
+};
+
+const closeUserDetails = () => {
+  showModal.value = false;
+  selectedUser.value = null;
+};
+
+const exportCSV = () => {
+  const headers = ['Cliente', 'Correo electrónico', 'Registro', 'Simulaciones', 'Estado'];
+
+  const rows = usersToShow.value.map(user => [
+    user.name,
+    user.email,
+    user.registeredAt,
+    `${user.simulations} guardadas`,
+    user.status
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(value => `"${value}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csvContent], {
+    type: 'text/csv;charset=utf-8;'
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = 'usuarios_base_altoque.csv';
+  link.click();
+
+  URL.revokeObjectURL(url);
+};
+
+const getBankColor = (bankName) => {
+  const name = (bankName || '').toLowerCase();
+
+  if (name.includes('bcp')) return '#ff5a00';
+  if (name.includes('interbank')) return '#00b14f';
+  if (name.includes('bbva')) return '#072146';
+  if (name.includes('scotiabank')) return '#ef4444';
+
+  return '#64748b';
+};
+
+const getBankNameFromCredit = (credit) => {
+  return credit.bankName || credit.banco || credit.entidad || 'Personalizado';
+};
+
+const calculateAvgTicket = (credits) => {
+  if (!credits.length) return 'N/A';
+
+  const total = credits.reduce((sum, credit) => {
+    return sum + Number(credit.precio_venta || credit.vehiclePrice || 0);
+  }, 0);
+
+  const average = total / credits.length;
+
+  return `S/ ${average.toLocaleString('en-US', {
+    maximumFractionDigits: 0
+  })}`;
+};
+
+const buildBankPreferences = (credits) => {
+  const grouped = {};
+
+  credits.forEach((credit) => {
+    const bankName = getBankNameFromCredit(credit);
+
+    if (!grouped[bankName]) {
+      grouped[bankName] = {
+        bankName,
+        count: 0,
+        color: getBankColor(bankName)
+      };
+    }
+
+    grouped[bankName].count += 1;
+  });
+
+  return Object.values(grouped);
+};
+
+const buildRecentSimulations = (credits) => {
+  return credits.slice(0, 3).map((credit) => {
+    const bankName = getBankNameFromCredit(credit);
+
+    return {
+      vehicle: `${credit.marca || 'Vehículo'} ${credit.modelo || 'Simulado'}`,
+      bankName,
+      color: getBankColor(bankName),
+      downPayment: credit.precio_venta
+        ? `${Math.round((Number(credit.cuota_inicial) / Number(credit.precio_venta)) * 100)}%`
+        : '0%',
+      term: Number(credit.plazo_meses || 0)
+    };
+  });
 };
 </script>
 
@@ -63,7 +269,7 @@ const openUserDetails = (user) => {
         <h2>Usuarios Registrados</h2>
         <p class="subtitle">Visualiza a los clientes finales (Usuarios Base) que utilizan el simulador.</p>
       </div>
-      <button class="btn btn-outline">Exportar CSV</button>
+      <button class="btn btn-outline" @click="exportCSV">Exportar CSV</button>
     </div>
 
     <div class="table-card mt-4">
@@ -79,7 +285,7 @@ const openUserDetails = (user) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in mockUsers" :key="user.id">
+          <tr v-for="user in usersToShow" :key="user.id">
             <td class="font-bold">
               <div class="user-name-col">
                 <img :src="`https://ui-avatars.com/api/?name=${user.name.replace(' ', '+')}&background=f1f5f9&color=64748b`" class="user-avatar" />
@@ -101,7 +307,12 @@ const openUserDetails = (user) => {
     </div>
     
     <!-- User Details Modal -->
-    <AdminUserDetailsModal :show="showModal" :user="selectedUser" @close="showModal = false" />
+    <AdminUserDetailsModal
+  v-if="selectedUser"
+  :show="showModal"
+  :user="selectedUser"
+  @close="closeUserDetails"
+/>
   </div>
 </template>
 

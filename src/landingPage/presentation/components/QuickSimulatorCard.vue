@@ -9,8 +9,8 @@
       <div class="input-group">
         <label>Monto del vehículo</label>
         <div class="input-wrapper">
-          <span class="currency-prefix">S/</span>
-          <input type="number" v-model="loanAmount" class="input-field input-with-prefix" />
+          <span class="currency-prefix">{{ currency === 'PEN' ? 'S/' : '$' }}</span>
+          <input type="number" v-model="vehiclePrice" class="input-field input-with-prefix" />
         </div>
       </div>
       
@@ -25,7 +25,7 @@
       <div class="input-group">
         <label>Tasa de interés (TEA)</label>
         <div class="input-wrapper">
-          <input type="number" v-model="teaRate" class="input-field input-with-suffix" />
+          <input type="number" v-model="rateValue" class="input-field input-with-suffix" />
           <span class="percentage-suffix">%</span>
         </div>
       </div>
@@ -41,7 +41,9 @@
         </select>
       </div>
       
-      <button class="btn btn-primary btn-block">Calcular crédito</button>
+      <button class="btn btn-primary btn-block" @click="goToSimulator">
+        Ver cronograma completo
+      </button>
       
       <div class="results-grid">
         <div class="result-box">
@@ -50,7 +52,7 @@
         </div>
         <div class="result-box">
           <span class="result-label">VAN</span>
-          <span class="result-value">S/ {{ formattedVAN }}</span>
+          <span class="result-value">{{ currency === 'PEN' ? 'S/' : '$' }} {{ formattedVAN }}</span>
         </div>
         <div class="result-box">
           <span class="result-label">TIR</span>
@@ -63,17 +65,35 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useCreditSimulator } from '../../../frontend/cliente/application/useCreditSimulator.js';
 
-const { loanAmount, currency, teaRate, periods, metrics } = useCreditSimulator();
+const router = useRouter();
+const {
+  vehiclePrice,
+  currency,
+  rateValue,
+  periods,
+  metrics,
+  rateType
+} = useCreditSimulator();
+
+rateType.value = 'TEA';
+
+const goToSimulator = () => {
+  router.push('/simulator');
+};
 
 const formattedTCEA = computed(() => metrics.value.tcea.toFixed(1));
-// Formateamos VAN separando por comas (miles)
-const formattedVAN = computed(() => {
-  return Math.max(0, metrics.value.van).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-});
-const formattedTIR = computed(() => metrics.value.tir.toFixed(1));
 
+const formattedVAN = computed(() => {
+  return Math.max(0, metrics.value.van).toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
+});
+
+const formattedTIR = computed(() => metrics.value.tir.toFixed(1));
 </script>
 
 <style scoped>

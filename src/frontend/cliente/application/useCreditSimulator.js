@@ -306,14 +306,30 @@ export function useCreditSimulator() {
             date: new Date().toISOString(),
             entity: selectedEntityId.value,
             product: selectedProductId.value,
+            promotion: selectedPromotionId.value,
             vehiclePrice: vehiclePrice.value,
+            currency: currency.value,
             downPayment: (vehiclePrice.value * downPaymentPercentage.value) / 100,
+            downPaymentPercentage: downPaymentPercentage.value,
             loanAmount: loanAmount.value,
             periods: periods.value,
             rateType: rateType.value,
             rateValue: rateValue.value,
+            capitalization: capitalization.value,
+            hasVehicularInsurance: hasVehicularInsurance.value,
+            vehicularInsurancePercentage: vehicularInsurancePercentage.value,
+            hasDesgravamen: hasDesgravamen.value,
+            desgravamenRate: desgravamenRate.value,
+            hasPortes: hasPortes.value,
+            portesValue: portesValue.value,
+            gracePeriodsTotal: gracePeriodsTotal.value,
+            gracePeriodsPartial: gracePeriodsPartial.value,
+            residualValue: residualValue.value,
             tcea: metrics.value.tcea,
-            monthlyPayment: metrics.value.monthlyPayment
+            tir: metrics.value.tir,
+            van: metrics.value.van,
+            monthlyPayment: metrics.value.monthlyPayment,
+            schedule: schedule.value
         };
         
         savedSimulationsList.value.unshift(sim); // Agregar al inicio
@@ -327,20 +343,37 @@ return sim;
     };
 
     const loadSimulation = (sim) => {
-        selectedEntityId.value = sim.entity;
-        selectedProductId.value = sim.product;
-        vehiclePrice.value = sim.vehiclePrice;
-        
-        // Calcular el porcentaje de cuota inicial a partir de sim.downPayment
+        selectedEntityId.value = sim.entity || 'custom';
+        selectedProductId.value = sim.product || 'custom';
+        selectedPromotionId.value = sim.promotion || null;
+        vehiclePrice.value = sim.vehiclePrice || 60000;
+        currency.value = sim.currency || 'PEN';
+
+        if (sim.downPaymentPercentage !== undefined) {
+        downPaymentPercentage.value = sim.downPaymentPercentage;
+    } else if (sim.downPayment && sim.vehiclePrice) {
         const percentage = (sim.downPayment / sim.vehiclePrice) * 100;
-        downPaymentPercentage.value = Math.round(percentage * 100) / 100; // Redondear a 2 decimales
-        
-        periods.value = sim.periods;
-        rateType.value = sim.rateType || 'TEA';
-        rateValue.value = sim.rateValue;
-        
-        // Deseleccionar promociones previas al cargar una antigua
-        selectedPromotionId.value = null;
+        downPaymentPercentage.value = Math.round(percentage * 100) / 100;
+    }
+
+    periods.value = sim.periods || 48;
+
+    rateType.value = sim.rateType || 'TEA';
+    rateValue.value = sim.rateValue || 15;
+    capitalization.value = sim.capitalization || 12;
+
+    hasVehicularInsurance.value = sim.hasVehicularInsurance !== undefined ? sim.hasVehicularInsurance : true;
+    vehicularInsurancePercentage.value = sim.vehicularInsurancePercentage || 0.1;
+
+    hasDesgravamen.value = sim.hasDesgravamen !== undefined ? sim.hasDesgravamen : true;
+    desgravamenRate.value = sim.desgravamenRate || 0.05;
+
+    hasPortes.value = sim.hasPortes !== undefined ? sim.hasPortes : true;
+    portesValue.value = sim.portesValue || 5.00;
+
+    gracePeriodsTotal.value = sim.gracePeriodsTotal || 0;
+    gracePeriodsPartial.value = sim.gracePeriodsPartial || 0;
+    residualValue.value = sim.residualValue || 0;
     };
 
     return {

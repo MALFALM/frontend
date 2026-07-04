@@ -1,7 +1,16 @@
 <script setup>
 import { useProfile } from '../../application/useProfile';
+import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { useRouter } from 'vue-router';
 
 const { profileImage, userName, userRole } = useProfile();
+const authStore = useAuthStore();
+const router = useRouter();
+
+const handleLogout = () => {
+  authStore.logout();
+  router.push('/login');
+};
 </script>
 
 <template>
@@ -36,6 +45,12 @@ const { profileImage, userName, userRole } = useProfile();
           <span class="icon">⇄</span>
           <span>Comparar Escenarios</span>
         </router-link>
+
+        <router-link to="/inicio/soporte" class="nav-item" active-class="active">
+          <span class="icon">🎧</span>
+          <span>Centro de Ayuda</span>
+        </router-link>
+
         <router-link to="/inicio/ajustes" class="nav-item" active-class="active">
           <span class="icon">⚙</span>
           <span>Ajustes de Perfil</span>
@@ -53,6 +68,9 @@ const { profileImage, userName, userRole } = useProfile();
             <span class="user-role">{{ userRole }}</span>
           </div>
         </router-link>
+        <button class="logout-btn" title="Cerrar sesión" @click="handleLogout">
+          🚪
+        </button>
       </div>
     </aside>
 
@@ -250,5 +268,22 @@ const { profileImage, userName, userRole } = useProfile();
 .content-wrapper {
   padding: 0 40px 40px 40px;
   flex: 1;
+}
+
+.logout-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 </style>
