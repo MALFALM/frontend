@@ -189,3 +189,78 @@ export const changePasswordRequest = async ({ id_user, currentPassword, newPassw
 
   return data;
 };
+
+
+export const createSupportTicketRequest = async (payload) => {
+  const response = await fetch(`${API_URL}/support/tickets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo crear el ticket de soporte');
+  }
+
+  return data;
+};
+
+export const getSupportTicketsRequest = async () => {
+  const response = await fetch(`${API_URL}/support/tickets`);
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar los tickets');
+  }
+
+  return data;
+};
+
+export const getSupportTicketsByUserRequest = async (userId) => {
+  const response = await fetch(`${API_URL}/support/tickets/user/${userId}`);
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar tus tickets');
+  }
+
+  return data;
+};
+
+export const sendSupportMessageRequest = async (ticketId, payload) => {
+  const response = await fetch(`${API_URL}/support/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo enviar el mensaje');
+  }
+
+  return data;
+};
+
+export const closeSupportTicketRequest = async (ticketId) => {
+  const response = await fetch(`${API_URL}/support/tickets/${ticketId}/close`, {
+    method: 'PATCH'
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo cerrar el ticket');
+  }
+
+  return data;
+};

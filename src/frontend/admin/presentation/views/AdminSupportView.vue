@@ -88,13 +88,21 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
-import { useSupportStore } from '../../../../config/useSupportStore';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import {
+  getSupportTicketsRequest,
+  sendSupportMessageRequest,
+  closeSupportTicketRequest
+} from '../../../shared/api/altoqueApi';
 
-const { chats, getChatById, sendMessage, closeChat } = useSupportStore();
+const chats = ref([]);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
 const activeChatId = ref(null);
-const activeChat = computed(() => activeChatId.value ? getChatById(activeChatId.value).value : null);
+const activeChat = computed(() => {
+  return chats.value.find(chat => chat.id === activeChatId.value) || null;
+});
 const replyText = ref('');
 const messagesContainer = ref(null);
 
@@ -113,24 +121,78 @@ watch(activeChatId, () => {
 });
 
 const getOtherParticipantName = (chat) => {
-  // Simple heuristic: if the first message is from user_juan, return that name
-  const firstMsg = chat.messages.find(m => m.senderId !== 'admin_support');
-  return firstMsg ? firstMsg.senderName : 'Usuario';
+  return chat.userName || 'Usuario';
 };
 
-const sendReply = () => {
-  if (replyText.value.trim() && activeChatId.value) {
-    sendMessage(activeChatId.value, 'admin_support', 'Soporte Altoque', replyText.value.trim());
+const sendReply = async () => {
+  try {
+    if (!replyText.value.trim() || !activeChatId.value) return;
+
+    await sendSupportMessageRequest(activeChatId.value, {
+      sender_role: 'admin',
+      sender_name: 'Soporte Altoque',
+      message: replyText.value.trim()
+    });
+
     replyText.value = '';
+    await loadTickets();
     scrollToBottom();
+  } catch (error) {
+    console.error('Error al responder ticket:', error);
+    errorMessage.value = error.message || 'No se pudo enviar la respuesta.';
   }
 };
 
-const closeCurrentChat = () => {
-  if (activeChatId.value) {
-    closeChat(activeChatId.value);
+const closeCurrentChat = async () => {
+  try {
+    if (!activeChatId.value) return;
+
+    await closeSupportTicketRequest(activeChatId.value);
+    await loadTickets();
+  } catch (error) {
+    console.error('Error al cerrar ticket:', error);
+    errorMessage.value = error.message || 'No se pudo cerrar el ticket.';
   }
 };
+
+const mapTicketToChat = (ticket) => {
+  return {
+    id: ticket.id_ticket,
+    subject: ticket.subject,
+    status: ticket.status,
+    lastUpdate: ticket.updated_at || ticket.created_at,
+    userName: ticket.display_name || ticket.username || 'Usuario',
+    userRole: ticket.rol,
+    messages: (ticket.messages || []).map((msg) => ({
+      id: msg.id_message,
+      senderId: msg.sender_role === 'admin' ? 'admin_support' : `user_${ticket.id_user}`,
+      senderName: msg.sender_name,
+      text: msg.message_text,
+      time: msg.created_at
+    }))
+  };
+};
+
+const loadTickets = async () => {
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
+
+    const response = await getSupportTicketsRequest();
+    const tickets = Array.isArray(response) ? response : response.data || [];
+
+    chats.value = tickets.map(mapTicketToChat);
+  } catch (error) {
+    console.error('Error al cargar tickets:', error);
+    errorMessage.value = error.message || 'No se pudieron cargar los tickets.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadTickets();
+});
 </script>
 
 <style scoped>
