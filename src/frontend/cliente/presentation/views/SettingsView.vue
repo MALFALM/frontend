@@ -14,7 +14,7 @@
         <div class="avatar-section mt-4">
           <div class="avatar-preview">
             <img :src="profileImage" alt="Perfil" v-if="profileImage" />
-            <div class="avatar-placeholder" v-else>AM</div>
+            <div class="avatar-placeholder" v-else>{{ avatarInitials }}</div>
           </div>
           
           <div class="avatar-actions">
@@ -22,7 +22,7 @@
               Subir nueva foto
               <input type="file" accept="image/*" class="hidden-input" @change="handleImageUpload" />
             </label>
-            <button class="btn btn-ghost text-danger" @click="profileImage = null" v-if="profileImage">Eliminar foto</button>
+            <button class="btn btn-ghost text-danger" @click="removeProfileImage" v-if="profileImage">Eliminar foto</button>
           </div>
         </div>
 
@@ -39,7 +39,7 @@
           <span class="helper-text">El correo no puede ser modificado.</span>
         </div>
         
-        <button class="btn btn-primary mt-4" @click="showToast('¡Perfil actualizado con éxito!')">Guardar cambios</button>
+        <button class="btn btn-primary mt-4" @click="saveProfile">Guardar cambios</button>
       </div>
 
       <!-- Tarjeta de Seguridad -->
@@ -78,8 +78,35 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useProfile } from '../../application/useProfile';
+import { useAuthStore } from '../../../../login/application/useAuthStore';
+import { updateProfileRequest } from '../../../shared/api/altoqueApi';
 
-const { profileImage, userName, userEmail, updateProfile  } = useProfile();
+const { profileImage } = useProfile();
+const authStore = useAuthStore();
+
+const currentUser = computed(() => {
+  return authStore.user.value;
+});
+
+const userName = ref(
+  currentUser.value?.display_name || ''
+);
+
+const userEmail = computed(() => {
+  return currentUser.value?.username || '';
+});
+
+const avatarInitials = computed(() => {
+  const name = userName.value || userEmail.value || 'Usuario';
+
+  return name
+    .split('@')[0]
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+});
 
 const passwords = ref({
   current: '',
@@ -94,40 +121,51 @@ const showToast = (msg) => {
   setTimeout(() => { toastMessage.value = ''; }, 3000);
 };
 
-const saveProfile = () => {
-  updateProfile({
-    name: userName.value,
-    profileImage: profileImage.value
-  });
+const saveProfile = async () => {
+  try {
+    const userId = currentUser.value?.id_user;
 
-  showToast('¡Perfil actualizado con éxito!');
+    if (!userId) {
+      throw new Error('No se encontró el usuario logueado.');
+    }
+
+    const response = await updateProfileRequest(userId, userName.value);
+
+    authStore.updateCurrentUser({
+      display_name: response.user.display_name
+    });
+
+    userName.value = response.user.display_name;
+
+    showToast('¡Perfil actualizado con éxito!');
+  } catch (error) {
+    showToast(error.message || 'No se pudo actualizar el perfil.');
+  }
 };
 
 const removeProfileImage = () => {
   profileImage.value = null;
-  updateProfile({
-    name: userName.value,
-    profileImage: null
-  });
-
   showToast('Foto de perfil eliminada');
 };
 
 const handleImageUpload = (event) => {
   const file = event.target.files[0];
+
   if (file) {
     const reader = new FileReader();
+
     reader.onload = (e) => {
       profileImage.value = e.target.result;
-      showToast('Foto de perfil actualizada (Local)');
+      showToast('Foto de perfil actualizada localmente');
     };
+
     reader.readAsDataURL(file);
   }
 };
 
 const isPasswordValid = computed(() => {
-  return passwords.value.current.length > 0 && 
-         passwords.value.new.length >= 8 && 
+  return passwords.value.current.length > 0 &&
+         passwords.value.new.length >= 8 &&
          passwords.value.new === passwords.value.confirm;
 });
 
