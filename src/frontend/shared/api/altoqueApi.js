@@ -1,10 +1,12 @@
 import { API_URL } from '../../../config/constants';
 
 export async function loginRequest(username, password) {
-  console.log('LOGIN URL:', `${API_URL}/auth/login`);
+  const url = `${API_URL}/auth/login`;
+
+  console.log('LOGIN URL:', url);
   console.log('LOGIN BODY:', { username, password });
 
-  const response = await fetch(`${API_URL}/auth/login`, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -12,7 +14,20 @@ export async function loginRequest(username, password) {
     body: JSON.stringify({ username, password })
   });
 
-  const data = await response.json();
+  const text = await response.text();
+
+  console.log('LOGIN STATUS:', response.status);
+  console.log('LOGIN RAW RESPONSE:', text);
+
+  let data;
+
+  try {
+    data = JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `El backend no devolvió JSON. Status: ${response.status}. Respuesta: ${text.slice(0, 120)}`
+    );
+  }
 
   if (!response.ok) {
     throw new Error(data.message || 'Error al iniciar sesión');
