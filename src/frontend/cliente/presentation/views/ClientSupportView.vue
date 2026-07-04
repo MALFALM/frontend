@@ -1,7 +1,7 @@
 <template>
   <div class="support-view">
     <div class="header-section">
-      <h2 class="title">Centro de Ayuda y Soporte</h2>
+      <h2 class="title">Centro de Ayuda y Soporte 🔥</h2>
       <p class="subtitle">Comunícate con nuestros asesores para resolver cualquier duda.</p>
     </div>
 
