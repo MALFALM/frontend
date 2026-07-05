@@ -60,49 +60,51 @@ export function generateSchedule({
         let interest = balance * monthlyRate;
         let amortization = 0;
         let quota = 0;
+        let initialBalanceForLog = balance;
 
         if (month <= gracePeriodsTotal) {
-            // Gracia Total: No paga nada, el interés se capitaliza
-            amortization = -interest; 
+            // Gracia Total: No paga interés ni capital. El interés se capitaliza.
+            amortization = 0; 
             quota = 0;
-            // El seguro en gracia total igual se cobra o se difiere? Normalmente se paga seguro.
-            // Asumiremos que la cuota es solo el seguro.
+            // El interés se suma al saldo
+            balance += interest;
         } else if (month <= totalGracePeriods) {
             // Gracia Parcial: Paga interés, no amortiza
             amortization = 0;
             quota = interest;
+            // Saldo se mantiene igual
         } else {
             // Periodo normal
-            // Recalcular cuota asumiendo el saldo actual y los periodos restantes normales
             const remainingPeriods = periods - month + 1;
-            quota = calculateFrenchQuota(balance, monthlyRate, remainingPeriods, residualValue);
+            const adjustedRate = monthlyRate + desgravamenRate;
+            const pmt = calculateFrenchQuota(balance, adjustedRate, remainingPeriods, residualValue);
             
-            // Ajuste por valor residual en la última cuota
             if (month === periods) {
-                amortization = balance; // Amortiza todo el saldo restante (que incluye el VR)
-                interest = balance * monthlyRate; // El interés se basa en el saldo antes de la amortización
-                // Pero la cuota en el último mes será la cuota normal + valor residual
+                // Última cuota: ajustamos por posibles errores de redondeo
+                // Al final debe pagarse todo el saldo pendiente. 
+                // La amortización de la cuota limpia el saldo. El cliente paga el saldo total.
+                amortization = balance; 
                 quota = amortization + interest;
             } else {
-                interest = balance * monthlyRate;
-                amortization = quota - interest;
+                // Desglosar la cuota PMT que incluye el desgravamen
+                amortization = pmt - interest - desgravamenAmount;
+                quota = pmt - desgravamenAmount;
             }
+            balance -= amortization;
         }
 
         const totalQuota = quota + totalInsurance;
 
         schedule.push({
             month,
-            initialBalance: balance,
+            initialBalance: initialBalanceForLog,
             amortization,
             interest,
             insurance: totalInsurance,
-            quota,
+            quota: quota,
             totalQuota,
             type: month <= gracePeriodsTotal ? 'Gracia Total' : (month <= totalGracePeriods ? 'Gracia Parcial' : 'Cuota Normal')
         });
-
-        balance -= amortization;
     }
 
     return schedule;
