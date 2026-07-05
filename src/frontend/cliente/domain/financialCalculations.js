@@ -63,11 +63,11 @@ export function generateSchedule({
         let initialBalanceForLog = balance;
 
         if (month <= gracePeriodsTotal) {
-            // Gracia Total: No paga interés ni capital. El interés se capitaliza.
+            // Gracia Total: No paga interés, capital ni seguro. Todo se capitaliza.
             amortization = 0; 
             quota = 0;
-            // El interés se suma al saldo
-            balance += interest;
+            // El interés y el seguro se suman al saldo deudor
+            balance += interest + totalInsurance;
         } else if (month <= totalGracePeriods) {
             // Gracia Parcial: Paga interés, no amortiza
             amortization = 0;
@@ -93,7 +93,12 @@ export function generateSchedule({
             balance -= amortization;
         }
 
-        const totalQuota = quota + totalInsurance;
+        let totalQuota = quota + totalInsurance;
+
+        // En gracia total la cuota final es estrictamente 0
+        if (month <= gracePeriodsTotal) {
+            totalQuota = 0;
+        }
 
         schedule.push({
             month,
