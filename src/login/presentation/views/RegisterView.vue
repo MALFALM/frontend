@@ -4,26 +4,6 @@
       <h2 class="view-title">Crea tu cuenta</h2>
       <p class="view-subtitle">Empieza a simular créditos en minutos.</p>
       
-      <div class="role-selector">
-        <button 
-          type="button"
-          class="role-btn" 
-          :class="{ active: role === 'cliente' }" 
-          @click="role = 'cliente'"
-        >
-          Cliente
-        </button>
-
-        <button 
-          type="button"
-          class="role-btn" 
-          :class="{ active: role === 'entidad' }" 
-          @click="role = 'entidad'"
-        >
-          Entidad financiera
-        </button>
-      </div>
-      
       <form @submit.prevent="handleRegister" class="auth-form">
         <div class="form-group">
           <label>Nombre completo</label>
@@ -45,10 +25,6 @@
             required
             class="input-field"
           />
-
-          <span v-if="role === 'entidad'" class="field-hint">
-            Usa el correo corporativo proporcionado por el banco.
-          </span>
         </div>
         
         <div class="form-group">
