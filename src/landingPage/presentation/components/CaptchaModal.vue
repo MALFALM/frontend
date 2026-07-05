@@ -10,7 +10,7 @@
           </label>
         </div>
         <div class="captcha-right">
-          <img src="public/captcha-logo.png" />
+          <img :src="captchaLogo" alt="Captcha logo" class="recaptcha-logo" />
           <div class="captcha-terms">Privacidad - Condiciones</div>
         </div>
       </div>
@@ -20,7 +20,8 @@
 
 <script setup>
 import { ref } from 'vue';
-
+import captchaLogo from '../../../assets/captcha-logo.png';
+  
 const props = defineProps({
   isOpen: Boolean
 });
