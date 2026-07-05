@@ -10,7 +10,7 @@
           </label>
         </div>
         <div class="captcha-right">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/RecaptchaLogo.svg/200px-RecaptchaLogo.svg.png" alt="reCAPTCHA logo" class="recaptcha-logo" />
+          <img src="/captcha-logo.png" alt="Captcha logo" class="recaptcha-logo" />
           <div class="captcha-terms">Privacidad - Condiciones</div>
         </div>
       </div>
