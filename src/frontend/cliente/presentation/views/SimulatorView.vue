@@ -223,7 +223,7 @@
         </div>
         <div class="metric-card">
           <span class="metric-label">TIR MENSUAL</span>
-          <span class="metric-value">{{ (metrics.tir / 12).toFixed(2) }}%</span>
+          <span class="metric-value">{{ (metrics.tirMonthly || 0).toFixed(2) }}%</span>
         </div>
         <div class="metric-card">
           <span class="metric-label">VAN (COK 10%)</span>
@@ -412,7 +412,16 @@ const formatMoney = (val) => {
 };
 
 const totalInterest = computed(() => {
-  return schedule.value.reduce((acc, curr) => acc + curr.interest, 0);
+  return schedule.value.reduce((acc, curr) => {
+    if (curr.type === 'Cuota Final') return acc;
+    const desgravamen = curr.desgravamen || 0;
+    const excelQuota = curr.type === 'Gracia Total'
+      ? 0
+      : curr.type === 'Cuota Normal'
+        ? (curr.quota || 0) + desgravamen
+        : (curr.quota || 0);
+    return acc + excelQuota - (curr.amortization || 0) - desgravamen;
+  }, 0);
 });
 
 const getTypeClass = (type) => {

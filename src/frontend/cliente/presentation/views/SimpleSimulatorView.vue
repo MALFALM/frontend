@@ -176,7 +176,7 @@ const handleCalculate = () => {
     if (schedule.value.length > 0) {
         monthlyPayment.value = schedule.value[0].totalQuota;
         
-        const cashFlows = schedule.value.map(item => item.totalQuota);
+        const cashFlows = schedule.value.map(item => item.cashFlow ?? item.totalQuota);
         const discountRate = effectiveAnnualToPeriod(0.1, 12); // 10% COK test
         
         metrics.value.van = calculateNPV(loanAmount.value, cashFlows, discountRate);

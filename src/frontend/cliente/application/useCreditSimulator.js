@@ -191,18 +191,21 @@ export function useCreditSimulator() {
   });
 
   const metrics = computed(() => {
-    if (!schedule.value.length) return { van: 0, tir: 0, tcea: 0, monthlyPayment: 0 };
+    if (!schedule.value.length) return { van: 0, tir: 0, tirMonthly: 0, tirAnnual: 0, tcea: 0, monthlyPayment: 0 };
     const amount = loanAmount.value;
-    const cashFlows = schedule.value.map((item) => item.totalQuota);
+    const cashFlows = schedule.value.map((item) => item.cashFlow ?? item.totalQuota);
     const discountRate = effectiveAnnualToPeriod(0.1, 12);
     const van = calculateNPV(amount, cashFlows, discountRate);
     const monthlyIRR = calculateIRR(amount, cashFlows);
     const tcea = calculateTCEA(monthlyIRR);
     const normalQuotaItem = schedule.value.find((item) => item.type === 'Cuota Normal');
+    const tirAnnual = (Math.pow(1 + monthlyIRR, 12) - 1) * 100;
 
     return {
       van,
-      tir: (Math.pow(1 + monthlyIRR, 12) - 1) * 100,
+      tir: tirAnnual,
+      tirMonthly: monthlyIRR * 100,
+      tirAnnual,
       tcea: tcea * 100,
       monthlyPayment: normalQuotaItem ? normalQuotaItem.totalQuota : schedule.value[0].totalQuota
     };
