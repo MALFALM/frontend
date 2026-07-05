@@ -10,7 +10,7 @@
           </label>
         </div>
         <div class="captcha-right">
-          <img src="/captcha-logo.png" />
+          <img src="public/captcha-logo.png" />
           <div class="captcha-terms">Privacidad - Condiciones</div>
         </div>
       </div>
