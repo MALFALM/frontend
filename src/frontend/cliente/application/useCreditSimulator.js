@@ -243,10 +243,7 @@ export function useCreditSimulator() {
     isSaving.value = true;
 
     try {
-      const response = await apiRequest('/creditos/guardar', {
-        method: 'POST',
-        body: { simulation: sim }
-      });
+      const response = await saveCreditRequest({ simulation: sim });
       sim.backendId = response.data?.idCredito;
       persistHistory();
     } catch (error) {
