@@ -8,10 +8,8 @@ import {
     calculateTCEA 
 } from '../domain/financialCalculations.js';
 import { useEntitiesStore } from '../../entidad-financiera/application/useEntitiesStore.js';
-// 1. IMPORTAMOS LA API CORRECTA
 import { saveCreditRequest } from '../../shared/api/altoqueApi.js'; 
 
-// ---- GLOBAL STATE (Shared across all components) ----
 const STORAGE_KEY = 'altoque_simulation_state';
 const loadInitialState = () => {
     try {
@@ -243,27 +241,29 @@ export function useCreditSimulator() {
     });
 
     const metrics = computed(() => {
-        if (!schedule.value || schedule.value.length === 0) return { van: 0, tir: 0, tcea: 0, monthlyPayment: 0 };
+        if (!schedule.value || schedule.value.length === 0) return { van: 0, tir: 0, tirMonthly: 0, tirAnnual: 0, tcea: 0, monthlyPayment: 0 };
         
         const amount = loanAmount.value;
-        const cashFlows = schedule.value.map(item => item.totalQuota);
-        const discountRate = effectiveAnnualToPeriod(0.1, 12); // COK 10%
+        const cashFlows = schedule.value.map(item => item.cashFlow ?? item.totalQuota);
+        const discountRate = effectiveAnnualToPeriod(0.1, 12);
         
         const van = calculateNPV(amount, cashFlows, discountRate);
         const monthlyIRR = calculateIRR(amount, cashFlows);
         const tcea = calculateTCEA(monthlyIRR);
+        const tirAnnual = (Math.pow(1 + monthlyIRR, 12) - 1) * 100;
 
         const normalQuotaItem = schedule.value.find(s => s.type === 'Cuota Normal');
         
         return {
             van: van,
-            tir: (Math.pow(1 + monthlyIRR, 12) - 1) * 100,
+            tir: tirAnnual,
+            tirMonthly: monthlyIRR * 100,
+            tirAnnual: tirAnnual,
             tcea: tcea * 100,
             monthlyPayment: normalQuotaItem ? normalQuotaItem.totalQuota : schedule.value[0].totalQuota
         };
     });
 
-    // 4. LA NUEVA LÓGICA ASÍNCRONA PARA GUARDAR EN EL BACKEND
     const saveCurrentSimulation = async (customName) => {
         const sim = {
             id: Date.now().toString(),
@@ -271,6 +271,7 @@ export function useCreditSimulator() {
             date: new Date().toISOString(),
             entity: selectedEntityId.value,
             product: selectedProductId.value,
+            currency: currency.value, // <--- Dato nuevo necesario
             vehiclePrice: vehiclePrice.value,
             downPayment: (vehiclePrice.value * downPaymentPercentage.value) / 100,
             loanAmount: loanAmount.value,
@@ -278,7 +279,10 @@ export function useCreditSimulator() {
             rateType: rateType.value,
             rateValue: rateValue.value,
             tcea: metrics.value.tcea,
+            tir: metrics.value.tir,   // <--- Dato nuevo necesario
+            van: metrics.value.van,   // <--- Dato nuevo necesario
             monthlyPayment: metrics.value.monthlyPayment,
+            residualValue: residualValue.value, // <--- Dato nuevo necesario
             schedule: schedule.value 
         };
         
