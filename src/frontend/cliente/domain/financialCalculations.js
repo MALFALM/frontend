@@ -1,9 +1,9 @@
 /**
- * Calcula la cuota mensual utilizando el método francés, considerando valor residual y periodos de gracia.
- * @param {number} p Monto principal (préstamo) a amortizar en el periodo de cuotas normales
- * @param {number} i Tasa de interés efectiva del periodo (ej. mensual, expresada en decimal)
- * @param {number} n Número de periodos (cuotas normales a pagar)
- * @param {number} residualValue Valor residual (balón) a pagar al final
+ * Calcula la cuota mensual utilizando el metodo frances, considerando valor residual y periodos de gracia.
+ * @param {number} p Monto principal del prestamo a amortizar en el periodo de cuotas normales
+ * @param {number} i Tasa de interes efectiva del periodo, expresada en decimal
+ * @param {number} n Numero de periodos de cuotas normales a pagar
+ * @param {number} residualValue Valor residual a pagar al final
  * @returns {number} Valor de la cuota constante
  */
 export function calculateFrenchQuota(p, i, n, residualValue = 0) {
@@ -30,21 +30,27 @@ export function effectiveAnnualToPeriod(tea, periodsInYear = 12) {
 
 /**
  * Calcula el cronograma de pagos avanzado.
- * @param {Object} params Parámetros de simulación
+ * @param {Object} params Parametros de simulacion
  */
 export function generateSchedule({
     loanAmount,
     monthlyRate,
     periods,
     monthlyInsuranceFixed = 0,
-    desgravamenRate = 0, // Porcentaje mensual sobre saldo deudor
+    desgravamenRate = 0,
     residualValue = 0,
     gracePeriodsTotal = 0,
     gracePeriodsPartial = 0
 }) {
     const schedule = [];
-    let balance = loanAmount;
-    
+    const paymentRate = monthlyRate + desgravamenRate;
+    let balance = residualValue > 0
+        ? loanAmount - (residualValue / Math.pow(1 + paymentRate, periods + 1))
+        : loanAmount;
+    let residualBalance = residualValue > 0
+        ? residualValue / Math.pow(1 + paymentRate, periods + 1)
+        : 0;
+
     const totalGracePeriods = gracePeriodsTotal + gracePeriodsPartial;
     const normalPeriods = periods - totalGracePeriods;
 
@@ -53,75 +59,80 @@ export function generateSchedule({
     }
 
     for (let month = 1; month <= periods; month++) {
-        // Seguros
-        const desgravamenAmount = balance * desgravamenRate;
+        const initialBalanceForLog = balance;
+        const interest = initialBalanceForLog * monthlyRate;
+        const desgravamenAmount = initialBalanceForLog * desgravamenRate;
         const totalInsurance = monthlyInsuranceFixed + desgravamenAmount;
-        
-        let interest = balance * monthlyRate;
+        const residualInterest = residualBalance * monthlyRate;
+        const residualDesgravamen = residualBalance * desgravamenRate;
+
         let amortization = 0;
         let quota = 0;
-        let initialBalanceForLog = balance;
 
         if (month <= gracePeriodsTotal) {
-            // Gracia Total: No paga interés, capital ni seguro. Todo se capitaliza.
-            amortization = 0; 
+            amortization = 0;
             quota = 0;
-            // El interés y el seguro se suman al saldo deudor
-            balance += interest + totalInsurance;
+            balance += interest;
         } else if (month <= totalGracePeriods) {
-            // Gracia Parcial: Paga interés, no amortiza
             amortization = 0;
             quota = interest;
-            // Saldo se mantiene igual
         } else {
-            // Periodo normal
             const remainingPeriods = periods - month + 1;
-            const adjustedRate = monthlyRate + desgravamenRate;
-            const pmt = calculateFrenchQuota(balance, adjustedRate, remainingPeriods, residualValue);
-            
-            if (month === periods) {
-                // Última cuota: ajustamos por posibles errores de redondeo
-                // Al final debe pagarse todo el saldo pendiente. 
-                // La amortización de la cuota limpia el saldo. El cliente paga el saldo total.
-                amortization = balance; 
-                quota = amortization + interest;
-            } else {
-                // Desglosar la cuota PMT que incluye el desgravamen
-                amortization = pmt - interest - desgravamenAmount;
-                quota = pmt - desgravamenAmount;
-            }
+            const pmt = calculateFrenchQuota(initialBalanceForLog, paymentRate, remainingPeriods, 0);
+            amortization = pmt - interest - desgravamenAmount;
+            quota = pmt - desgravamenAmount;
             balance -= amortization;
         }
 
-        let totalQuota = quota + totalInsurance;
+        residualBalance += residualInterest + residualDesgravamen;
 
-        // En gracia total la cuota final es estrictamente 0
-        if (month <= gracePeriodsTotal) {
-            totalQuota = 0;
-        }
+        const cashFlow = quota + totalInsurance;
 
         schedule.push({
             month,
             initialBalance: initialBalanceForLog,
             amortization,
             interest,
+            desgravamen: desgravamenAmount,
+            fixedCharges: monthlyInsuranceFixed,
             insurance: totalInsurance,
-            quota: quota,
-            totalQuota,
+            quota,
+            residualPayment: 0,
+            totalQuota: month <= gracePeriodsTotal ? 0 : cashFlow,
+            cashFlow,
             type: month <= gracePeriodsTotal ? 'Gracia Total' : (month <= totalGracePeriods ? 'Gracia Parcial' : 'Cuota Normal')
+        });
+    }
+
+    if (residualValue > 0) {
+        const residualInterest = residualBalance * monthlyRate;
+        const residualDesgravamen = residualBalance * desgravamenRate;
+        const residualPayment = residualBalance + residualInterest + residualDesgravamen;
+
+        schedule.push({
+            month: periods + 1,
+            initialBalance: 0,
+            amortization: 0,
+            interest: residualInterest,
+            desgravamen: residualDesgravamen,
+            fixedCharges: monthlyInsuranceFixed,
+            insurance: monthlyInsuranceFixed + residualDesgravamen,
+            quota: 0,
+            residualPayment,
+            totalQuota: residualPayment + monthlyInsuranceFixed,
+            type: 'Cuota Final'
         });
     }
 
     return schedule;
 }
-
 /**
  * Calcula el Valor Actual Neto (VAN)
  */
 export function calculateNPV(initialInvestment, cashFlows, discountRate) {
-    let npv = -initialInvestment;
+    let npv = initialInvestment;
     for (let t = 0; t < cashFlows.length; t++) {
-        npv += cashFlows[t] / Math.pow(1 + discountRate, t + 1);
+        npv -= cashFlows[t] / Math.pow(1 + discountRate, t + 1);
     }
     return npv;
 }
