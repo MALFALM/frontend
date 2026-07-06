@@ -62,6 +62,12 @@ const gracePeriodsTotal = ref(savedState.gracePeriodsTotal || 0);
 const gracePeriodsPartial = ref(savedState.gracePeriodsPartial || 0);
 const residualValue = ref(savedState.residualValue || 0);
 
+watch([residualValue, loanAmount], () => {
+    if (residualValue.value > loanAmount.value) {
+        residualValue.value = loanAmount.value;
+    }
+});
+
 // Auto-guardado en LocalStorage
 watch([
     selectedEntityId, selectedProductId, selectedPromotionId, vehiclePrice, currency, downPaymentPercentage, periods,
