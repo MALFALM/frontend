@@ -230,7 +230,7 @@
         </div>
         <div class="metric-card">
           <span class="metric-label">TIR MENSUAL</span>
-          <span class="metric-value">{{ (metrics.tir / 12).toFixed(2) }}%</span>
+          <span class="metric-value">{{ metrics.tirMonthly.toFixed(2) }}%</span>
         </div>
         <div class="metric-card">
           <span class="metric-label">VAN (COK 10%)</span>
