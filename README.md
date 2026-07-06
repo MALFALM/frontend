@@ -43,8 +43,6 @@ El proyecto sigue lineamientos de **Domain-Driven Design (DDD)** adaptados al fr
 
 Cuando se implemente las bases de datos (Ej. Postgres/MongoDB) y los endpoints (REST/GraphQL), deberán conectarse a los *Composables* mencionados (todos los archivos dentro de carpetas `application/`) sustituyendo la lectura de `localStorage` por llamadas HTTP usando `fetch` o `axios`.
 
-## Comandos
-
 ```bash
 # Instalar dependencias
 npm install
