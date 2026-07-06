@@ -20,7 +20,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import captchaLogo from '../../public/captcha-logo.png';
+import captchaLogo from '../../../assets/captcha-logo.png';
   
 const props = defineProps({
   isOpen: Boolean
@@ -34,6 +34,7 @@ const handleCheck = () => {
   if (isChecked.value) return;
   isChecked.value = true;
   
+  // Simulamos un pequeño delay de validación de red antes de continuar
   setTimeout(() => {
     emit('verified');
     // Reseteamos por si vuelven a abrirlo
