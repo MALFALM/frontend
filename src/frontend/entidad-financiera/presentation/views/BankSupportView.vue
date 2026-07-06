@@ -92,7 +92,7 @@ import {
   getSupportTicketsByUserRequest, 
   createSupportTicketRequest, 
   sendSupportMessageRequest 
-} from '../../../../shared/api/altoqueApi';
+} from '@/shared/api/altoqueApi';
 
 const authStore = useAuthStore();
 const userId = computed(() => {
