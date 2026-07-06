@@ -136,7 +136,7 @@
                 <td>S/ {{ formatMoney(item.amortization) }}</td>
                 <td>S/ {{ formatMoney(monthlyInsurance) }}</td>
                 <td class="font-bold text-blue highlight-col">S/ {{ formatMoney(item.totalQuota) }}</td>
-                <td>S/ {{ formatMoney(item.initialBalance - item.amortization) }}</td>
+                <td>S/ {{ formatMoney(item.finalBalance ?? (item.initialBalance - item.amortization)) }}</td>
               </tr>
             </tbody>
           </table>
@@ -147,8 +147,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { generateSchedule, effectiveAnnualToPeriod, calculateNPV, calculateIRR, calculateTCEA } from '../../domain/financialCalculations';
+import { ref } from 'vue';
+import { apiRequest } from '../../../../services/api';
 
 const currency = ref('PEN');
 const vehiclePrice = ref(150000);
@@ -157,33 +157,41 @@ const teaRate = ref(12);
 const periods = ref(24);
 const monthlyInsurance = ref(65);
 
-const loanAmount = computed(() => vehiclePrice.value - downPayment.value);
+const loanAmount = ref(0);
 const schedule = ref([]);
 const metrics = ref({ van: 0, tir: 0, tcea: 0 });
 const monthlyPayment = ref(0);
 
-const handleCalculate = () => {
-    const teaDecimal = teaRate.value / 100;
-    const monthlyRate = effectiveAnnualToPeriod(teaDecimal, 12);
-    
-    schedule.value = generateSchedule({
-        loanAmount: loanAmount.value,
-        monthlyRate,
-        periods: periods.value,
-        monthlyInsuranceFixed: monthlyInsurance.value
+const handleCalculate = async () => {
+    const downPaymentPercentage = vehiclePrice.value
+        ? (downPayment.value / vehiclePrice.value) * 100
+        : 0;
+
+    const result = await apiRequest('/creditos/simular', {
+        method: 'POST',
+        body: {
+            vehiclePrice: vehiclePrice.value,
+            currency: currency.value,
+            downPaymentPercentage,
+            periods: periods.value,
+            rateType: 'TEA',
+            rateValue: teaRate.value,
+            hasVehicularInsurance: false,
+            hasDesgravamen: false,
+            hasPortes: true,
+            portesValue: monthlyInsurance.value,
+            gracePeriodsTotal: 0,
+            gracePeriodsPartial: 0,
+            residualValue: 0
+        }
     });
-    
-    if (schedule.value.length > 0) {
-        monthlyPayment.value = schedule.value[0].totalQuota;
-        
-        const cashFlows = schedule.value.map(item => item.cashFlow ?? item.totalQuota);
-        const discountRate = effectiveAnnualToPeriod(0.1, 12); // 10% COK test
-        
-        metrics.value.van = calculateNPV(loanAmount.value, cashFlows, discountRate);
-        const mIRR = calculateIRR(loanAmount.value, cashFlows);
-        metrics.value.tir = (Math.pow(1 + mIRR, 12) - 1) * 100;
-        metrics.value.tcea = calculateTCEA(mIRR) * 100;
-    }
+
+    schedule.value = result.schedule || [];
+    loanAmount.value = result.summary?.loanAmount || 0;
+    metrics.value.van = result.summary?.van || 0;
+    metrics.value.tir = result.summary?.tirAnnual || 0;
+    metrics.value.tcea = result.summary?.tcea || 0;
+    monthlyPayment.value = result.summary?.monthlyPayment || 0;
 };
 
 const formatMoney = (val) => Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

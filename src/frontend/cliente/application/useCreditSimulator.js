@@ -1,12 +1,4 @@
 ﻿import { ref, computed, watch } from 'vue';
-import {
-  generateSchedule,
-  effectiveAnnualToPeriod,
-  nominalToEffective,
-  calculateNPV,
-  calculateIRR,
-  calculateTCEA
-} from '../domain/financialCalculations.js';
 import { useEntitiesStore } from '../../entidad-financiera/application/useEntitiesStore.js';
 import { apiRequest } from '../../../services/api';
 
@@ -47,6 +39,11 @@ const portesValue = ref(savedState.portesValue || 5.00);
 const gracePeriodsTotal = ref(savedState.gracePeriodsTotal || 0);
 const gracePeriodsPartial = ref(savedState.gracePeriodsPartial || 0);
 const residualValue = ref(savedState.residualValue || 0);
+const simulationResult = ref(null);
+const simulationError = ref('');
+const isSimulating = ref(false);
+let simulationTimer = null;
+let simulationRequestId = 0;
 
 watch([
   selectedEntityId, selectedProductId, selectedPromotionId, vehiclePrice, currency, downPaymentPercentage, periods,
@@ -138,76 +135,83 @@ export function useCreditSimulator() {
     if (downPaymentPercentage.value < newMin) downPaymentPercentage.value = newMin;
   });
 
-  const loanAmount = computed(() => {
-    let amount = vehiclePrice.value - ((vehiclePrice.value * downPaymentPercentage.value) / 100);
-    if (activePromotion.value?.type === 'capital_discount') amount -= activePromotion.value.value;
-    return Math.max(0, amount);
-  });
-
-  const monthlyInsuranceFixed = computed(() => {
-    let total = 0;
-    if (hasVehicularInsurance.value && activePromotion.value?.type !== 'free_vehicular_insurance') {
-      total += vehiclePrice.value * (vehicularInsurancePercentage.value / 100);
-    }
-    if (hasPortes.value && activePromotion.value?.type !== 'free_portes') {
-      total += portesValue.value;
-    }
-    return total;
-  });
-
-  const monthlyRate = computed(() => {
+  const simulationPayload = computed(() => {
     let baseRateValue = Number(rateValue.value || 0);
     if (activePromotion.value?.type === 'rate_discount') baseRateValue -= activePromotion.value.value;
-    const rateDecimal = Math.max(0, baseRateValue) / 100;
-    const tea = rateType.value === 'TNA' ? nominalToEffective(rateDecimal, capitalization.value) : rateDecimal;
-    return effectiveAnnualToPeriod(tea, 12);
-  });
-
-  const schedule = computed(() => {
-    try {
-      let finalDesgravamenRate = hasDesgravamen.value ? (desgravamenRate.value / 100) : 0;
-      if (activePromotion.value?.type === 'free_desgravamen') finalDesgravamenRate = 0;
-
-      let finalGracePeriodsTotal = gracePeriodsTotal.value;
-      if (activePromotion.value?.type === 'grace_months') finalGracePeriodsTotal += activePromotion.value.value;
-
-      let finalGracePeriodsPartial = gracePeriodsPartial.value;
-      if (activePromotion.value?.type === 'grace_months_partial') finalGracePeriodsPartial += activePromotion.value.value;
-
-      return generateSchedule({
-        loanAmount: loanAmount.value,
-        monthlyRate: monthlyRate.value,
-        periods: periods.value,
-        monthlyInsuranceFixed: monthlyInsuranceFixed.value,
-        desgravamenRate: finalDesgravamenRate,
-        residualValue: residualValue.value,
-        gracePeriodsTotal: finalGracePeriodsTotal,
-        gracePeriodsPartial: finalGracePeriodsPartial
-      });
-    } catch (error) {
-      console.error('Error al generar cronograma:', error.message);
-      return [];
-    }
-  });
-
-  const metrics = computed(() => {
-    if (!schedule.value.length) return { van: 0, tir: 0, tirMonthly: 0, tirAnnual: 0, tcea: 0, monthlyPayment: 0 };
-    const amount = loanAmount.value;
-    const cashFlows = schedule.value.map((item) => item.cashFlow ?? item.totalQuota);
-    const discountRate = effectiveAnnualToPeriod(0.1, 12);
-    const van = calculateNPV(amount, cashFlows, discountRate);
-    const monthlyIRR = calculateIRR(amount, cashFlows);
-    const tcea = calculateTCEA(monthlyIRR);
-    const normalQuotaItem = schedule.value.find((item) => item.type === 'Cuota Normal');
-    const tirAnnual = (Math.pow(1 + monthlyIRR, 12) - 1) * 100;
 
     return {
-      van,
-      tir: tirAnnual,
-      tirMonthly: monthlyIRR * 100,
-      tirAnnual,
-      tcea: tcea * 100,
-      monthlyPayment: normalQuotaItem ? normalQuotaItem.totalQuota : schedule.value[0].totalQuota
+      vehiclePrice: Number(vehiclePrice.value || 0),
+      currency: currency.value,
+      downPaymentPercentage: activePromotion.value?.type === 'zero_down_payment'
+        ? 0
+        : Number(downPaymentPercentage.value || 0),
+      periods: Number(periods.value || 0),
+      rateType: rateType.value,
+      rateValue: Math.max(0, baseRateValue),
+      capitalization: Number(capitalization.value || 12),
+      hasVehicularInsurance: activePromotion.value?.type === 'free_vehicular_insurance'
+        ? false
+        : Boolean(hasVehicularInsurance.value),
+      vehicularInsurancePercentage: Number(vehicularInsurancePercentage.value || 0),
+      hasDesgravamen: activePromotion.value?.type === 'free_desgravamen'
+        ? false
+        : Boolean(hasDesgravamen.value),
+      desgravamenRate: Number(desgravamenRate.value || 0),
+      hasPortes: activePromotion.value?.type === 'free_portes'
+        ? false
+        : Boolean(hasPortes.value),
+      portesValue: Number(portesValue.value || 0),
+      gracePeriodsTotal: Number(gracePeriodsTotal.value || 0) +
+        (activePromotion.value?.type === 'grace_months' ? Number(activePromotion.value.value || 0) : 0),
+      gracePeriodsPartial: Number(gracePeriodsPartial.value || 0) +
+        (activePromotion.value?.type === 'grace_months_partial' ? Number(activePromotion.value.value || 0) : 0),
+      residualValue: Number(residualValue.value || 0)
+    };
+  });
+
+  const runSimulation = async () => {
+    const requestId = ++simulationRequestId;
+    isSimulating.value = true;
+    simulationError.value = '';
+
+    try {
+      const result = await apiRequest('/creditos/simular', {
+        method: 'POST',
+        body: simulationPayload.value
+      });
+
+      if (requestId === simulationRequestId) {
+        simulationResult.value = result;
+      }
+    } catch (error) {
+      if (requestId === simulationRequestId) {
+        simulationResult.value = null;
+        simulationError.value = error.message;
+      }
+    } finally {
+      if (requestId === simulationRequestId) {
+        isSimulating.value = false;
+      }
+    }
+  };
+
+  watch(simulationPayload, () => {
+    window.clearTimeout(simulationTimer);
+    simulationTimer = window.setTimeout(runSimulation, 250);
+  }, { deep: true, immediate: true });
+
+  const loanAmount = computed(() => simulationResult.value?.summary?.loanAmount || 0);
+  const monthlyInsuranceFixed = computed(() => simulationResult.value?.summary?.totalFixedCharges || 0);
+  const schedule = computed(() => simulationResult.value?.schedule || []);
+  const metrics = computed(() => {
+    const summary = simulationResult.value?.summary || {};
+    return {
+      van: Number(summary.van || 0),
+      tir: Number(summary.tirAnnual || 0),
+      tirMonthly: Number(summary.tirMonthly || 0),
+      tirAnnual: Number(summary.tirAnnual || 0),
+      tcea: Number(summary.tcea || 0),
+      monthlyPayment: Number(summary.monthlyPayment || 0)
     };
   });
 
@@ -216,24 +220,31 @@ export function useCreditSimulator() {
   };
 
   const saveCurrentSimulation = async (customName) => {
+    if (!simulationResult.value || !schedule.value.length) {
+      saveError.value = simulationError.value || 'No hay una simulacion calculada por el backend';
+      return null;
+    }
+
+    const input = simulationResult.value.input || {};
+    const summary = simulationResult.value.summary || {};
     const sim = {
       id: Date.now().toString(),
       name: customName || `Simulacion ${new Date().toLocaleDateString()}`,
       date: new Date().toISOString(),
       entity: selectedEntityId.value,
       product: selectedProductId.value,
-      currency: currency.value,
-      vehiclePrice: vehiclePrice.value,
-      downPayment: (vehiclePrice.value * downPaymentPercentage.value) / 100,
-      loanAmount: loanAmount.value,
-      periods: periods.value,
-      rateType: rateType.value,
-      rateValue: rateValue.value,
-      tcea: metrics.value.tcea,
-      tir: metrics.value.tir,
-      van: metrics.value.van,
-      monthlyPayment: metrics.value.monthlyPayment,
-      residualValue: residualValue.value,
+      currency: input.currency || currency.value,
+      vehiclePrice: input.vehiclePrice ?? vehiclePrice.value,
+      downPayment: input.downPayment ?? ((vehiclePrice.value * downPaymentPercentage.value) / 100),
+      loanAmount: summary.loanAmount ?? loanAmount.value,
+      periods: input.periods ?? periods.value,
+      rateType: input.rateType || rateType.value,
+      rateValue: input.rateValue ?? rateValue.value,
+      tcea: summary.tcea ?? metrics.value.tcea,
+      tir: summary.tirAnnual ?? metrics.value.tir,
+      van: summary.van ?? metrics.value.van,
+      monthlyPayment: summary.monthlyPayment ?? metrics.value.monthlyPayment,
+      residualValue: input.residualValue ?? residualValue.value,
       schedule: schedule.value
     };
 
@@ -303,6 +314,8 @@ export function useCreditSimulator() {
     monthlyInsuranceFixed,
     schedule,
     metrics,
+    isSimulating,
+    simulationError,
     savedSimulationsList,
     isSaving,
     saveError,
