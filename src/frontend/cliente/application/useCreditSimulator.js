@@ -230,7 +230,7 @@ export function useCreditSimulator() {
                 periods: periods.value,
                 monthlyInsuranceFixed: monthlyInsuranceFixed.value,
                 desgravamenRate: finalDesgravamenRate,
-                residualValue: residualValue.value,
+                residualValue: Number(residualValue.value) || 0,
                 gracePeriodsTotal: finalGracePeriodsTotal,
                 gracePeriodsPartial: finalGracePeriodsPartial
             });
