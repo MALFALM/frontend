@@ -8,7 +8,7 @@ import {
   calculateTCEA
 } from '../domain/financialCalculations.js';
 import { useEntitiesStore } from '../../entidad-financiera/application/useEntitiesStore.js';
-import { apiRequest } from '../../../services/api';
+import { apiRequest } from '../../shared/api/altoqueApi.js';
 
 const STORAGE_KEY = 'altoque_simulation_state';
 const HISTORY_KEY = 'altoque_saved_simulations';
