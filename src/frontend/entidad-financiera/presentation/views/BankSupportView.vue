@@ -86,23 +86,30 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { useAuthStore } from '../../../../login/application/useAuthStore';
-import { useSupportStore } from '../../../../config/useSupportStore';
+import { 
+  getSupportTicketsByUserRequest, 
+  createSupportTicketRequest, 
+  sendSupportMessageRequest 
+} from '../../../../shared/api/altoqueApi';
 
 const authStore = useAuthStore();
-const { getChatsByUserId, getChatById, createNewChat, sendMessage } = useSupportStore();
-
-const userId = computed(() => authStore.user.value?.bankId || 'bank_anon');
+const userId = computed(() => {
+  return authStore.user.value?.bankId || authStore.user.value?.id_user || 'bank_anon';
+});
 const userName = computed(() => authStore.user.value?.bankName || 'Banco');
 
-const myChatsWrapper = getChatsByUserId(userId.value);
-const myChats = computed(() => myChatsWrapper.value);
+const myChats = ref([]);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
 const newSubject = ref('');
 const newMessage = ref('');
 const activeChatId = ref(null);
-const activeChat = computed(() => activeChatId.value ? getChatById(activeChatId.value).value : null);
+const activeChat = computed(() => {
+  return myChats.value.find(chat => chat.id === activeChatId.value) || null;
+});
 const replyText = ref('');
 const messagesContainer = ref(null);
 
@@ -117,13 +124,60 @@ watch(() => activeChat.value?.messages.length, () => {
   scrollToBottom();
 });
 
-const startChat = () => {
+const mapTicketToChat = (ticket) => {
+  return {
+    id: ticket.id_ticket,
+    subject: ticket.subject,
+    status: ticket.status,
+    lastUpdate: ticket.updated_at || ticket.created_at,
+    userName: ticket.display_name || ticket.username || 'Banco',
+    messages: (ticket.messages || []).map((msg) => ({
+      id: msg.id_message,
+      senderId: msg.sender_role === 'bank' ? userId.value : 'admin_support',
+      senderName: msg.sender_name,
+      text: msg.message_text,
+      time: msg.created_at
+    }))
+  };
+};
+
+const loadTickets = async () => {
+  if (!userId.value || userId.value === 'bank_anon') return;
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
+    const response = await getSupportTicketsByUserRequest(userId.value);
+    const tickets = Array.isArray(response) ? response : response.data || [];
+    myChats.value = tickets.map(mapTicketToChat);
+  } catch (error) {
+    console.error('Error al cargar tickets:', error);
+    errorMessage.value = error.message || 'No se pudieron cargar los tickets.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const startChat = async () => {
   if (newSubject.value && newMessage.value) {
-    const id = createNewChat(userId.value, userName.value, 'admin_support', newSubject.value, newMessage.value);
-    newSubject.value = '';
-    newMessage.value = '';
-    activeChatId.value = id;
-    scrollToBottom();
+    try {
+      await createSupportTicketRequest({
+        id_user: userId.value,
+        subject: newSubject.value,
+        message: newMessage.value,
+        sender_role: 'bank',
+        sender_name: userName.value
+      });
+      newSubject.value = '';
+      newMessage.value = '';
+      await loadTickets();
+      if (myChats.value.length > 0) {
+        activeChatId.value = myChats.value[0].id; // Open the newest ticket
+      }
+      scrollToBottom();
+    } catch (error) {
+      console.error('Error al crear ticket:', error);
+      errorMessage.value = error.message;
+    }
   }
 };
 
@@ -132,13 +186,27 @@ const openChat = (id) => {
   scrollToBottom();
 };
 
-const sendReply = () => {
+const sendReply = async () => {
   if (replyText.value.trim() && activeChatId.value) {
-    sendMessage(activeChatId.value, userId.value, userName.value, replyText.value.trim());
-    replyText.value = '';
-    scrollToBottom();
+    try {
+      await sendSupportMessageRequest(activeChatId.value, {
+        sender_role: 'bank',
+        sender_name: userName.value,
+        message: replyText.value.trim()
+      });
+      replyText.value = '';
+      await loadTickets();
+      scrollToBottom();
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+      errorMessage.value = error.message;
+    }
   }
 };
+
+onMounted(() => {
+  loadTickets();
+});
 </script>
 
 <style scoped>
