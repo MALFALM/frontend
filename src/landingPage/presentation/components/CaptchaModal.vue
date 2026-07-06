@@ -10,7 +10,7 @@
           </label>
         </div>
         <div class="captcha-right">
-          <img src="/public/captcha-logo.png" alt="Captcha logo" class="recaptcha-logo" />
+          <img :src="captchaLogo" alt="Captcha logo" class="recaptcha-logo" />
           <div class="captcha-terms">Privacidad - Condiciones</div>
         </div>
       </div>
@@ -20,7 +20,8 @@
 
 <script setup>
 import { ref } from 'vue';
-
+import captchaLogo from '../../public/captcha-logo.png';
+  
 const props = defineProps({
   isOpen: Boolean
 });
@@ -33,7 +34,6 @@ const handleCheck = () => {
   if (isChecked.value) return;
   isChecked.value = true;
   
-  // Simulamos un pequeño delay de validación de red antes de continuar
   setTimeout(() => {
     emit('verified');
     // Reseteamos por si vuelven a abrirlo
